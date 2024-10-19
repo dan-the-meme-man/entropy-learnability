@@ -1,0 +1,109 @@
+import os
+import gc
+import json
+from time import time
+
+import torch
+from torch import nn
+from torch.optim import Optimizer
+from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import _LRScheduler as Scheduler
+from transformers import GPT2LMHeadModel
+
+torch.manual_seed(42)
+
+def free_memory():
+    gc.collect()
+    torch.cuda.empty_cache()
+
+def train_and_validate(
+    model: GPT2LMHeadModel,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    optimizer: Optimizer,
+    criterion: nn.Module,
+    epochs: int,
+    log_interval: int,
+    save_name: str,
+    scheduler: Scheduler,
+    device: str
+):
+    
+    model.to(device)
+    print(f'Training {save_name} on {device}.')
+    
+    train_losses = []
+    times = []
+    val_losses = []
+    
+    for epoch in range(epochs):
+        print(f'Epoch {epoch + 1}')
+        
+        model.train()
+        
+        train_losses.append([])
+        
+        for i, batch in enumerate(train_loader):
+            
+            start = time()
+            
+            optimizer.zero_grad()
+            
+            input_ids = batch.squeeze(0).to(device)
+            attention_mask = torch.ones_like(input_ids).to(device)
+            
+            inputs = {
+                'input_ids': input_ids,
+                'attention_mask': attention_mask
+            }
+            
+            # language modeling with GPT2 - GPT2 shifts the input to the right by one token on its own
+            outputs = model(**inputs, labels=inputs['input_ids'])
+            loss = outputs.loss
+            
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+            loss_val = loss.item()
+            train_losses[epoch].append(loss_val)
+            times.append(time() - start)
+            
+            if (i+1) % log_interval == 0:
+                avg_loss = sum(train_losses[epoch]) / len(train_losses[epoch])
+                avg_time = sum(times) / len(times)
+                print(f'Batch {i+1:04}/{len(train_loader)}, Loss: {loss_val:.3f}, Avg Loss: {avg_loss:.3f}, Avg Time: {avg_time:.3f}')
+                
+            del input_ids, attention_mask, inputs, outputs, loss
+            free_memory()
+                
+        model.eval()
+        
+        total_loss = 0
+        
+        with torch.no_grad():
+            for i, batch in enumerate(val_loader):
+                input_ids = batch[:, :-1]
+                target_ids = batch[:, 1:]
+                
+                output = model(input_ids)
+                
+                loss = criterion(
+                    output.view(-1, output.size(-1)),
+                    target_ids.view(-1)
+                )
+                
+                total_loss += loss.item()
+                
+        avg_loss = total_loss / len(val_loader)
+                
+        print(f'Validation Loss: {avg_loss}')
+        val_losses.append(avg_loss)
+
+    os.makedirs('models', exist_ok=True)
+    os.makedirs('results', exist_ok=True)
+    torch.save(model.state_dict(), os.path.join('models', save_name + '.pt'))
+    with open(os.path.join('results', save_name + '.json'), 'w+', encoding='utf-8') as f:
+        json.dump({
+            'train_losses': train_losses,
+            'val_losses': val_losses
+        }, f)
