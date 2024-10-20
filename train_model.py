@@ -57,7 +57,6 @@ def train_and_validate(
                 'attention_mask': attention_mask
             }
             
-            # language modeling with GPT2 - GPT2 shifts the input to the right by one token on its own
             outputs = model(**inputs, labels=inputs['input_ids'])
             loss = outputs.loss
             
@@ -71,7 +70,9 @@ def train_and_validate(
             if (i+1) % log_interval == 0:
                 avg_loss = sum(train_losses[epoch]) / len(train_losses[epoch])
                 avg_time = sum(times) / len(times)
-                print(f'Batch {i+1:04}/{len(train_loader)}, Loss: {loss_val:.3f}, Avg Loss: {avg_loss:.3f}, Avg Time: {avg_time:.3f}')
+                print(
+                    f'Batch {i+1:04}/{len(train_loader):04}, Loss: {loss_val:.3f}, Avg Loss: {avg_loss:.3f}, Avg Time: {avg_time:.3f}'
+                )
                 
             del input_ids, attention_mask, inputs, outputs, loss
             free_memory()
@@ -80,23 +81,34 @@ def train_and_validate(
         
         total_loss = 0
         
+        print(f'Eval {epoch + 1}')
+        
         with torch.no_grad():
             for i, batch in enumerate(val_loader):
-                input_ids = batch[:, :-1]
-                target_ids = batch[:, 1:]
                 
-                output = model(input_ids)
+                input_ids = batch.squeeze(0).to(device)
+                attention_mask = torch.ones_like(input_ids).to(device)
                 
-                loss = criterion(
-                    output.view(-1, output.size(-1)),
-                    target_ids.view(-1)
-                )
+                inputs = {
+                    'input_ids': input_ids,
+                    'attention_mask': attention_mask
+                }
+                
+                outputs = model(**inputs, labels=inputs['input_ids'])
+                loss = outputs.loss
                 
                 total_loss += loss.item()
                 
+                if (i+1) % log_interval == 0:
+                    avg_loss = sum(train_losses[epoch]) / len(train_losses[epoch])
+                    avg_time = sum(times) / len(times)
+                    print(
+                        f'Batch {i+1:04}/{len(val_loader):04}, Loss: {loss_val:.3f}, Avg Loss: {avg_loss:.3f}, Avg Time: {avg_time:.3f}'
+                    )
+                
         avg_loss = total_loss / len(val_loader)
                 
-        print(f'Validation Loss: {avg_loss}')
+        print(f'Average validation Loss: {avg_loss:.3}')
         val_losses.append(avg_loss)
 
     os.makedirs('models', exist_ok=True)
@@ -106,4 +118,4 @@ def train_and_validate(
         json.dump({
             'train_losses': train_losses,
             'val_losses': val_losses
-        }, f)
+        }, f, indent=4)

@@ -34,8 +34,8 @@ def main():
     hparams = {
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'vocab_size': int(args.vocab_size),
-        'n_positions': 128,
-        'n_embd': 128,
+        'n_positions': 64,
+        'n_embd': 64,
         'n_layer': 4,
         'n_head': 4,
         'resid_pdrop': 0.05,
@@ -45,16 +45,16 @@ def main():
         'bos_token_id': 0,
         'eos_token_id': 1,
         'batch_size': 4,
-        'sequence_length': 128,
-        'epochs': 10,
+        'sequence_length': 64,
+        'epochs': 3,
         'learning_rate': 0.001,
         'warmup_steps': 100,
         'weight_decay': 0.01,
         'adam_epsilon': 1e-8,
         'max_grad_norm': 1.0,
         'dist': args.distribution,
-        'num_train_samples': 9000,
-        'num_val_samples': 1000
+        'num_train_samples': 10,
+        'num_val_samples': 10
     }
 
     if hparams['dist'] == 'uniform_unigrams':
