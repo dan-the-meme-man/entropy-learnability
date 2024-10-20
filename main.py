@@ -46,15 +46,15 @@ def main():
         'eos_token_id': 1,
         'batch_size': 4,
         'sequence_length': 64,
-        'epochs': 3,
+        'epochs': 5,
         'learning_rate': 0.001,
         'warmup_steps': 100,
         'weight_decay': 0.01,
         'adam_epsilon': 1e-8,
         'max_grad_norm': 1.0,
         'dist': args.distribution,
-        'num_train_samples': 10,
-        'num_val_samples': 10
+        'num_train_samples': 900,
+        'num_val_samples': 100
     }
 
     if hparams['dist'] == 'uniform_unigrams':
