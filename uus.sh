@@ -12,10 +12,10 @@ module load gcc/11.4.0
 
 nvidia-smi
 
-python main.py -d uniform_unigrams -v 10 -s True
+python main.py -d uniform_unigrams -v 10 -s
 
-python main.py -d uniform_unigrams -v 100 -s True
+python main.py -d uniform_unigrams -v 100 -s
 
-python main.py -d uniform_unigrams -v 1000 -s True
+python main.py -d uniform_unigrams -v 1000 -s
 
-python main.py -d uniform_unigrams -v 10000 -s True
+python main.py -d uniform_unigrams -v 10000 -s

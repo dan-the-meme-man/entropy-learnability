@@ -12,10 +12,10 @@ module load gcc/11.4.0
 
 nvidia-smi
 
-python main.py -d uneven_bigrams -v 10 -s False
+python main.py -d uneven_bigrams -v 10
 
-python main.py -d uneven_bigrams -v 100 -s False
+python main.py -d uneven_bigrams -v 100
 
-python main.py -d uneven_bigrams -v 1000 -s False
+python main.py -d uneven_bigrams -v 1000
 
-python main.py -d uneven_bigrams -v 10000 -s False
+python main.py -d uneven_bigrams -v 10000
