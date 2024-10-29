@@ -5,6 +5,7 @@ import torch
 from model import *
 from generate_unigram_sequences import *
 from generate_bigram_sequences import *
+from unigram_tables import *
 from bigram_tables import *
 from train_model import *
 
@@ -29,6 +30,7 @@ def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--distribution', '-d', type=str, choices=distributions)
     argparser.add_argument('--vocab_size', '-v', type=int, choices=vocab_sizes)
+    argparser.add_argument('--softmax', '-s', type=bool, default=False)
     args = argparser.parse_args()
 
     hparams = {
@@ -57,22 +59,58 @@ def main():
         'num_val_samples': 100
     }
 
+    save_name = f'{hparams["dist"]}_{hparams["vocab_size"]}'
+    save_name += f'_{"softmax" if args.softmax else "nosoftmax"}'
+    os.makedirs('pmfs', exist_ok=True)
+    
     if hparams['dist'] == 'uniform_unigrams':
+        unigram_probs = create_uniform_unigram_table(
+            hparams['vocab_size'],
+            softmax=args.softmax
+        )
+
+        torch.save(
+            unigram_probs,
+            os.path.join('pmfs', f'{save_name}.pt')
+        )
+        
         def get_sequences():
-            return uniform_unigrams(
+            return generate_unigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
-                hparams['vocab_size']
+                unigram_probs
             )
     elif hparams['dist'] == 'normal_unigrams':
+        unigram_probs = create_normal_unigram_table(
+            hparams['vocab_size'],
+            softmax=args.softmax
+        )
+        
+        torch.save(
+            unigram_probs,
+            os.path.join('pmfs', f'{save_name}.pt')
+        )
+        
         def get_sequences():
-            return normal_unigrams(
+            return generate_unigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
-                hparams['vocab_size']
+                unigram_probs
             )
     elif hparams['dist'] == 'normal_bigrams':
-        bigram_probs, start_probs = create_normal_bigram_table(hparams['vocab_size'])
+        bigram_probs, start_probs = create_normal_bigram_table(
+            hparams['vocab_size'],
+            softmax=args.softmax
+        )
+        
+        torch.save(
+            bigram_probs,
+            os.path.join('pmfs', f'{save_name}.pt')
+        )
+        torch.save(
+            start_probs,
+            os.path.join('pmfs', f'{save_name}_start.pt')
+        )
         
         def get_sequences():
             return generate_bigram_sequences_using_table(
@@ -82,7 +120,19 @@ def main():
                 start_probs
             )
     elif hparams['dist'] == 'uneven_bigrams':
-        bigram_probs, start_probs = create_uneven_bigram_table(hparams['vocab_size'])
+        bigram_probs, start_probs = create_uneven_bigram_table(
+            hparams['vocab_size'],
+            softmax=args.softmax
+        )
+        
+        torch.save(
+            bigram_probs,
+            os.path.join('pmfs', f'{save_name}.pt')
+        )
+        torch.save(
+            start_probs,
+            os.path.join('pmfs', f'{save_name}_start.pt')
+        )
         
         def get_sequences():
             return generate_bigram_sequences_using_table(
@@ -117,7 +167,7 @@ def main():
         criterion=torch.nn.CrossEntropyLoss(),
         epochs=hparams['epochs'],
         log_interval=10,
-        save_name=f'{hparams["dist"]}_{hparams["vocab_size"]}',
+        save_name=save_name,
         scheduler=get_scheduler(optimizer, hparams['warmup_steps']),
         device=hparams['device']
     )
