@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="norm_uni"
+#SBATCH --job-name="nus"
 #SBATCH --output="%j_%x.o"
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

@@ -32,9 +32,6 @@ def main():
     argparser.add_argument('--vocab_size', '-v', type=int, choices=vocab_sizes)
     argparser.add_argument('--softmax', '-s', action='store_true')
     args = argparser.parse_args()
-    
-    print(args.softmax)
-    exit()
 
     hparams = {
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',

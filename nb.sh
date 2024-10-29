@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="norm_bi"
+#SBATCH --job-name="nb"
 #SBATCH --output="%j_%x.o"
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
