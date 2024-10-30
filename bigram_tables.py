@@ -13,6 +13,8 @@ def create_normal_bigram_table(vocab_size: int, softmax=False) -> tuple[Tensor, 
             dim=-1
         )
     else:
+        bigram_probs += bigram_probs.min()
+        bigram_probs = bigram_probs.abs()
         bigram_probs = bigram_probs / bigram_probs.sum(dim=-1, keepdim=True)
     
     start_probs = torch.randn(vocab_size - 2)
@@ -23,6 +25,8 @@ def create_normal_bigram_table(vocab_size: int, softmax=False) -> tuple[Tensor, 
             dim=-1
         )
     else:
+        start_probs += start_probs.min()
+        start_probs = start_probs.abs()
         start_probs = start_probs / start_probs.sum()
     
     bigram_probs.requires_grad = False
@@ -46,6 +50,8 @@ def create_uneven_bigram_table(vocab_size: int, softmax=False) -> tuple[Tensor, 
     if softmax:
         bigram_probs = torch.nn.functional.softmax(bigram_probs, dim=-1)
     else:
+        bigram_probs += bigram_probs.min()
+        bigram_probs = bigram_probs.abs()
         bigram_probs = bigram_probs / bigram_probs.sum(dim=-1, keepdim=True)
     
     start_probs_to_change = torch.randint(0, vocab_size - 2, (num_probs_to_change**2,))
@@ -58,6 +64,8 @@ def create_uneven_bigram_table(vocab_size: int, softmax=False) -> tuple[Tensor, 
     if softmax:
         start_probs = torch.nn.functional.softmax(start_probs, dim=-1)
     else:
+        start_probs += start_probs.min()
+        start_probs = start_probs.abs()
         start_probs = start_probs / start_probs.sum()
     
     bigram_probs.requires_grad = False
