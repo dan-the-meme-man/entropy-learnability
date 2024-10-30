@@ -12,7 +12,7 @@ from transformers import GPT2LMHeadModel
 
 torch.manual_seed(42)
 
-def free_memory():
+def free_memory() -> None:
     gc.collect()
     torch.cuda.empty_cache()
 
@@ -21,13 +21,27 @@ def train_and_validate(
     train_loader: DataLoader,
     val_loader: DataLoader,
     optimizer: Optimizer,
-    criterion: nn.Module,
     epochs: int,
     log_interval: int,
     save_name: str,
     scheduler: Scheduler,
     device: str
-):
+) -> None:
+    
+    """
+        Train and validate a GPT2 model. Logs losses to file and saves the model.
+        
+        Args:
+            `model: GPT2LMHeadModel` - GPT2 model.
+            `train_loader: DataLoader` - DataLoader for training data.
+            `val_loader: DataLoader` - DataLoader for validation data.
+            `optimizer: Optimizer` - Optimizer for training.
+            `epochs: int` - Number of epochs to train for.
+            `log_interval: int` - Number of batches to wait before logging training status.
+            `save_name: str` - Name of the model and results file.
+            `scheduler: Scheduler` - Learning rate scheduler.
+            `device: str` - Device to train on.
+    """
     
     model.to(device)
     print(f'Training {save_name} on {device}.')

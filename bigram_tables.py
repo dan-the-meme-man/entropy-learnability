@@ -3,7 +3,21 @@ from torch import Tensor
 
 torch.manual_seed(42)
 
-def create_normal_bigram_table(vocab_size: int, softmax=False) -> tuple[Tensor, Tensor]:
+def create_normal_bigram_table(
+    vocab_size: int,
+    softmax: bool = False
+) -> tuple[Tensor, Tensor]:
+    
+    """
+        Create a bigram table with roughly normally distributed probabilities.
+        
+        Args:
+            `vocab_size: int` - the size of the vocabulary.
+            `softmax: bool` - whether to apply softmax to the probabilities.
+            
+        Returns:
+            `tuple[Tensor, Tensor]` - Bigram probabilities, start probabilities.
+    """
     
     bigram_probs = torch.randn(vocab_size - 2, vocab_size - 2)
     
@@ -34,7 +48,21 @@ def create_normal_bigram_table(vocab_size: int, softmax=False) -> tuple[Tensor, 
     
     return bigram_probs, start_probs
 
-def create_uneven_bigram_table(vocab_size: int, softmax=False) -> tuple[Tensor, Tensor]:
+def create_uneven_bigram_table(
+    vocab_size: int,
+    softmax: bool = False
+) -> tuple[Tensor, Tensor]:
+    
+    """
+        Create a bigram table with uneven probabilities.
+        
+        Args:
+            `vocab_size: int` - the size of the vocabulary.
+            `softmax: bool` - whether to apply softmax to the probabilities.
+            
+        Returns:
+            `tuple[Tensor, Tensor]` - Bigram probabilities, start probabilities.
+    """
     
     # randomly add a large value to a few of the bigram probabilities
     num_probs_to_change = 1 + int(0.05 * (vocab_size - 2))

@@ -1,17 +1,31 @@
+import os
 import argparse
 from multiprocessing import freeze_support
-import torch
 
-from model import *
-from generate_unigram_sequences import *
-from generate_bigram_sequences import *
-from unigram_tables import *
-from bigram_tables import *
-from train_model import *
+import torch
+from torch import Tensor
+from torch.utils.data import DataLoader
+
+from model import get_model, get_optimizer, get_scheduler
+from generate_unigram_sequences import generate_unigram_sequences_using_table
+from generate_bigram_sequences import generate_bigram_sequences_using_table
+from unigram_tables import create_normal_unigram_table, create_uniform_unigram_table
+from bigram_tables import create_normal_bigram_table, create_uneven_bigram_table
+from train_model import train_and_validate
 
 torch.manual_seed(42)
 
-def main():
+def main() -> None:
+    
+    """
+        Main function for training a model on sequences generated from a given distribution.
+        
+        Usage:
+            python main.py -d uniform_unigrams -v 100 -s
+            python main.py --distribution normal_unigrams --vocab_size 1000 --softmax
+            python main.py -d normal_bigrams -v 10000
+            etc.
+    """
 
     distributions = [
         'uniform_unigrams',
@@ -74,7 +88,7 @@ def main():
             os.path.join('pmfs', f'{save_name}.pt')
         )
         
-        def get_sequences():
+        def get_sequences() -> Tensor:
             return generate_unigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
@@ -91,7 +105,7 @@ def main():
             os.path.join('pmfs', f'{save_name}.pt')
         )
         
-        def get_sequences():
+        def get_sequences() -> Tensor:
             return generate_unigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
@@ -112,7 +126,7 @@ def main():
             os.path.join('pmfs', f'{save_name}_start.pt')
         )
         
-        def get_sequences():
+        def get_sequences() -> Tensor:
             return generate_bigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
@@ -134,7 +148,7 @@ def main():
             os.path.join('pmfs', f'{save_name}_start.pt')
         )
         
-        def get_sequences():
+        def get_sequences() -> Tensor:
             return generate_bigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
@@ -156,7 +170,7 @@ def main():
         shuffle=False,
         num_workers=2
     )
-    model=get_model(**hparams)
+    model = get_model(**hparams)
     optimizer = get_optimizer(model, hparams)
 
     train_and_validate(
@@ -164,7 +178,6 @@ def main():
         train_loader=train_loader,
         val_loader=val_loader,
         optimizer=optimizer,
-        criterion=torch.nn.CrossEntropyLoss(),
         epochs=hparams['epochs'],
         log_interval=10,
         save_name=save_name,

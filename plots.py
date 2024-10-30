@@ -25,7 +25,20 @@ marker_and_color = {
     'uniform_unigrams_10000.json': ('y', 's'),
 }
         
-def make_plots(results, title, fignums):
+def make_plots(
+    results: list[str],
+    title: str,
+    fignums: tuple[int, int]
+) -> None:
+    
+    """
+        Make plots of the training and validation losses.
+        
+        Args:
+            results: list[str] - the results files to plot.
+            title: str - the title of the plot.
+            fignums: tuple[int, int] - the figure numbers to use.
+    """
     
     fname = '_'.join(title.lower().split())
     
