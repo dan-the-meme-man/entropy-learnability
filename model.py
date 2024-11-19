@@ -46,7 +46,9 @@ def get_model(**kwargs) -> GPT2LMHeadModel:
     )
     
     return GPT2LMHeadModel(config).to(kwargs['device'])
-    
+
+
+
 def get_optimizer(
     model: Module,
     hparams: dict
@@ -69,7 +71,9 @@ def get_optimizer(
         eps=hparams['adam_epsilon'],
         weight_decay=hparams['weight_decay']
     )
-    
+
+
+
 def get_scheduler(
     optimizer: Optimizer,
     n_steps: int

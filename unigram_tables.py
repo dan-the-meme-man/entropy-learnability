@@ -1,5 +1,5 @@
 import torch
-from torch import Tensor
+from torch import Tensor, tensor, isclose
 
 torch.manual_seed(42)
 
@@ -19,7 +19,7 @@ def create_normal_unigram_table(
             `Tensor` - Unigram probabilities.
     """
     
-    unigram_probs = torch.randn(vocab_size - 2)
+    unigram_probs = torch.randn(vocab_size)
     
     if softmax:
         unigram_probs = torch.nn.functional.softmax(unigram_probs, dim=-1)
@@ -30,7 +30,11 @@ def create_normal_unigram_table(
     
     unigram_probs.requires_grad = False
     
+    assert isclose(unigram_probs.sum(), tensor(1.0))
+    
     return unigram_probs
+
+
 
 def create_uniform_unigram_table(
     vocab_size: int,
@@ -49,7 +53,7 @@ def create_uniform_unigram_table(
             `Tensor` - Unigram probabilities.
     """
     
-    unigram_probs = torch.ones(vocab_size - 2)
+    unigram_probs = torch.ones(vocab_size)
     
     if softmax:
         unigram_probs = torch.nn.functional.softmax(unigram_probs, dim=-1)
@@ -57,5 +61,7 @@ def create_uniform_unigram_table(
         unigram_probs = unigram_probs / unigram_probs.sum()
     
     unigram_probs.requires_grad = False
+    
+    assert isclose(unigram_probs.sum(), tensor(1.0))
     
     return unigram_probs

@@ -6,6 +6,8 @@ def calculate_entropy_unigram(unigram_table: Tensor) -> float:
     """
     return -1 * (unigram_table * unigram_table.log()).sum()
 
+
+
 def calculate_entropy_bigram(bigram_table: Tensor) -> float:
     """
     Calculate entropy of a bigram table.
@@ -19,7 +21,9 @@ def calculate_entropy_bigram(bigram_table: Tensor) -> float:
         return -1 * (joint_probs * joint_probs.log()).sum()
     except:
         return -1 * (joint_probs * (joint_probs + 1e-10).log()).sum()
-        
+
+
+
 def get_stationary_distribution(bigram_table: Tensor) -> Tensor:
     """
     Get the stationary distribution of a bigram table.

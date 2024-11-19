@@ -16,6 +16,8 @@ def free_memory() -> None:
     gc.collect()
     torch.cuda.empty_cache()
 
+
+
 def train_and_validate(
     model: GPT2LMHeadModel,
     train_loader: DataLoader,
