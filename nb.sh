@@ -12,10 +12,10 @@ module load gcc/11.4.0
 
 nvidia-smi
 
-python main.py -d normal_bigrams -v 10
+python main.py -d normal_bigrams -v 8
 
-python main.py -d normal_bigrams -v 100
+python main.py -d normal_bigrams -v 64
 
-python main.py -d normal_bigrams -v 1000
+python main.py -d normal_bigrams -v 512
 
-python main.py -d normal_bigrams -v 10000
+python main.py -d normal_bigrams -v 4096

@@ -34,16 +34,9 @@ def main() -> None:
         'uneven_bigrams'
     ]
 
-    vocab_sizes = [
-        10,
-        100,
-        1000,
-        10000
-    ]
-
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--distribution', '-d', type=str, choices=distributions)
-    argparser.add_argument('--vocab_size', '-v', type=int, choices=vocab_sizes)
+    argparser.add_argument('--vocab_size', '-v', type=int)
     argparser.add_argument('--softmax', '-s', action='store_true')
     args = argparser.parse_args()
 

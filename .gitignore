@@ -4,3 +4,6 @@ venv/
 models/
 *.o
 *.pdf
+pmfs/
+results/
+plots/

@@ -57,16 +57,15 @@ def create_uneven_bigram_table(
             `tuple[Tensor, Tensor]` - Bigram probabilities, start probabilities.
     """
     
-    # randomly add a large value to a few of the bigram probabilities
-    num_probs_to_change = 1 + int(0.05 * (vocab_size))
-    
     bigram_probs = torch.randn(vocab_size, vocab_size)
     
+    # randomly add a large value to a few of the bigram probabilities
+    num_probs_to_change = 1 + int(0.05 * (vocab_size))
     row_indices_to_change = torch.randint(0, vocab_size, (num_probs_to_change**2,))
     col_indices_to_change = torch.randint(0, vocab_size, (num_probs_to_change**2,))
     
     for i, j in zip(row_indices_to_change, col_indices_to_change):
-        bigram_probs[i, j] += vocab_size - 2 + torch.randn(1).item() * 0.5 * vocab_size
+        bigram_probs[i, j] += vocab_size + torch.randn(1).item() * 0.5 * vocab_size
     
     if softmax:
         bigram_probs = torch.nn.functional.softmax(
