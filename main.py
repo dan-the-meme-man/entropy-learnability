@@ -6,12 +6,12 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
+from generate_sequences import *
+from unigram_tables import *
+from bigram_tables import *
 from model import get_model, get_optimizer, get_scheduler
-from generate_unigram_sequences import generate_unigram_sequences_using_table
-from generate_bigram_sequences import generate_bigram_sequences_using_table
-from unigram_tables import create_normal_unigram_table, create_uniform_unigram_table
-from bigram_tables import create_normal_bigram_table, create_uneven_bigram_table
-from train_model import train_and_validate
+from train_model import train_and_test
+from entropy import calculate_entropy_unigram, calculate_entropy_bigram
 
 torch.manual_seed(42)
 
@@ -55,31 +55,26 @@ def main() -> None:
         'eos_token_id': 1,
         'batch_size': 4,
         'sequence_length': 64,
-        'epochs': 5,
+        'epochs': 2,
         'learning_rate': 0.001,
         'warmup_steps': 100,
         'weight_decay': 0.01,
         'adam_epsilon': 1e-8,
         'max_grad_norm': 1.0,
         'dist': args.distribution,
-        'num_train_samples': 900,
-        'num_val_samples': 100
+        'num_train_samples': 8_000,
+        'num_test_samples': 2_000,
+        'log_interval': 10
     }
 
     save_name = f'{hparams["dist"]}_{hparams["vocab_size"]}'
     save_name += f'_{"softmax" if args.softmax else "nosoftmax"}'
-    os.makedirs('pmfs', exist_ok=True)
     
     if hparams['dist'] == 'uniform_unigrams':
         unigram_probs = create_uniform_unigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
         )
-
-        torch.save(
-            unigram_probs,
-            os.path.join('pmfs', f'{save_name}.pt')
-        )
         
         def get_sequences() -> Tensor:
             return generate_unigram_sequences_using_table(
@@ -87,67 +82,50 @@ def main() -> None:
                 hparams['sequence_length'],
                 unigram_probs
             )
+            
+        entropy = calculate_entropy_unigram(unigram_probs)
     elif hparams['dist'] == 'normal_unigrams':
         unigram_probs = create_normal_unigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
         )
         
-        torch.save(
-            unigram_probs,
-            os.path.join('pmfs', f'{save_name}.pt')
-        )
-        
         def get_sequences() -> Tensor:
             return generate_unigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
                 unigram_probs
             )
+            
+        entropy = calculate_entropy_unigram(unigram_probs)
     elif hparams['dist'] == 'normal_bigrams':
-        bigram_probs, start_probs = create_normal_bigram_table(
+        bigram_probs = create_normal_bigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
-        )
-        
-        torch.save(
-            bigram_probs,
-            os.path.join('pmfs', f'{save_name}.pt')
-        )
-        torch.save(
-            start_probs,
-            os.path.join('pmfs', f'{save_name}_start.pt')
         )
         
         def get_sequences() -> Tensor:
             return generate_bigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
-                bigram_probs,
-                start_probs
+                bigram_probs
             )
+        
+        entropy = calculate_entropy_bigram(bigram_probs)
     elif hparams['dist'] == 'uneven_bigrams':
-        bigram_probs, start_probs = create_uneven_bigram_table(
+        bigram_probs = create_uneven_bigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
-        )
-        
-        torch.save(
-            bigram_probs,
-            os.path.join('pmfs', f'{save_name}.pt')
-        )
-        torch.save(
-            start_probs,
-            os.path.join('pmfs', f'{save_name}_start.pt')
         )
         
         def get_sequences() -> Tensor:
             return generate_bigram_sequences_using_table(
                 hparams['batch_size'],
                 hparams['sequence_length'],
-                bigram_probs,
-                start_probs
+                bigram_probs
             )
+            
+        entropy = calculate_entropy_bigram(bigram_probs)
     else:
         raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
 
@@ -157,8 +135,8 @@ def main() -> None:
         shuffle=True,
         num_workers=2
     )
-    val_loader = DataLoader(
-        [get_sequences() for _ in range(hparams['num_val_samples'])],
+    test_loader = DataLoader(
+        [get_sequences() for _ in range(hparams['num_test_samples'])],
         batch_size=1,
         shuffle=False,
         num_workers=2
@@ -166,16 +144,17 @@ def main() -> None:
     model = get_model(**hparams)
     optimizer = get_optimizer(model, hparams)
 
-    train_and_validate(
+    train_and_test(
         model=model,
         train_loader=train_loader,
-        val_loader=val_loader,
+        test_loader=test_loader,
         optimizer=optimizer,
         epochs=hparams['epochs'],
-        log_interval=10,
+        log_interval=hparams['log_interval'],
         save_name=save_name,
         scheduler=get_scheduler(optimizer, hparams['warmup_steps']),
-        device=hparams['device']
+        device=hparams['device'],
+        entropy=entropy
     )
     
 if __name__ == '__main__':

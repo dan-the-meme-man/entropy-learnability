@@ -12,13 +12,19 @@ hparams = {
         ('ub', create_uneven_bigram_table, calculate_entropy_bigram)
     ],
     'vocab_size': [
-        8, 64, 512, 4096, 32768
+        10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10_000
     ],
     'softmax': [True, False]
 }
 
 for table_and_entropy_functions, vocab_size, softmax in product(*hparams.values()):
     name, table_function, entropy_function = table_and_entropy_functions
+    
+    if name == 'uu' and softmax:
+        continue
+    if name == 'ub' and (vocab_size > 1000 or softmax):
+        continue
+    
     t = table_function(vocab_size, softmax)
     msg = f'Name: {name}, Vocab size: {vocab_size}'
     msg += f', Softmax: {softmax}, Entropy: {entropy_function(t)}'

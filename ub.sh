@@ -14,8 +14,18 @@ nvidia-smi
 
 python main.py -d uneven_bigrams -v 10
 
+python main.py -d uneven_bigrams -v 25
+
+python main.py -d uneven_bigrams -v 50
+
+python main.py -d uneven_bigrams -v 75
+
 python main.py -d uneven_bigrams -v 100
 
-python main.py -d uneven_bigrams -v 1000
+python main.py -d uneven_bigrams -v 250
 
-python main.py -d uneven_bigrams -v 10000
+python main.py -d uneven_bigrams -v 500
+
+python main.py -d uneven_bigrams -v 750
+
+python main.py -d uneven_bigrams -v 1000

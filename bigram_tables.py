@@ -1,22 +1,21 @@
 import torch
-from torch import Tensor, tensor, isclose
 
 torch.manual_seed(42)
 
 def create_normal_bigram_table(
     vocab_size: int,
     softmax: bool = False
-) -> Tensor:
+) -> torch.Tensor:
     
     """
         Create a bigram table with roughly normally distributed probabilities.
         
         Args:
-            `vocab_size: int` - the size of the vocabulary.
-            `softmax: bool` - whether to apply softmax to the probabilities.
+            vocab_size: `int` - The size of the vocabulary.
+            softmax: `bool` - Whether to apply softmax to the probabilities.
             
         Returns:
-            `tuple[Tensor, Tensor]` - Bigram probabilities, start probabilities.
+            `torch.Tensor` - Bigram transition probability table.
     """
     
     bigram_probs = torch.randn(vocab_size, vocab_size)
@@ -33,7 +32,7 @@ def create_normal_bigram_table(
     
     bigram_probs.requires_grad = False
     
-    assert isclose(bigram_probs.sum(1), tensor(1.0)).all()
+    assert torch.isclose(bigram_probs.sum(1), torch.tensor(1.0)).all()
     
     return bigram_probs
 
@@ -42,19 +41,17 @@ def create_normal_bigram_table(
 def create_uneven_bigram_table(
     vocab_size: int,
     softmax: bool = False
-) -> Tensor:
-    
-    # TODO: FIX
+) -> torch.Tensor:
     
     """
         Create a bigram table with uneven probabilities.
         
         Args:
-            `vocab_size: int` - the size of the vocabulary.
-            `softmax: bool` - whether to apply softmax to the probabilities.
+            vocab_size: `int` - The size of the vocabulary.
+            softmax: `bool` - Whether to apply softmax to the probabilities.
             
         Returns:
-            `tuple[Tensor, Tensor]` - Bigram probabilities, start probabilities.
+            `torch.Tensor` - Bigram transition probability table.
     """
     
     bigram_probs = torch.randn(vocab_size, vocab_size)
@@ -79,6 +76,6 @@ def create_uneven_bigram_table(
     
     bigram_probs.requires_grad = False
     
-    assert isclose(bigram_probs.sum(1), tensor(1.0)).all()
+    assert torch.isclose(bigram_probs.sum(1), torch.tensor(1.0)).all()
     
     return bigram_probs

@@ -14,8 +14,26 @@ nvidia-smi
 
 python main.py -d normal_unigrams -v 10 -s
 
+python main.py -d normal_unigrams -v 25 -s
+
+python main.py -d normal_unigrams -v 50 -s
+
+python main.py -d normal_unigrams -v 75 -s
+
 python main.py -d normal_unigrams -v 100 -s
 
+python main.py -d normal_unigrams -v 250 -s
+
+python main.py -d normal_unigrams -v 500 -s
+
+python main.py -d normal_unigrams -v 750 -s
+
 python main.py -d normal_unigrams -v 1000 -s
+
+python main.py -d normal_unigrams -v 2500 -s
+
+python main.py -d normal_unigrams -v 5000 -s
+
+python main.py -d normal_unigrams -v 7500 -s
 
 python main.py -d normal_unigrams -v 10000 -s

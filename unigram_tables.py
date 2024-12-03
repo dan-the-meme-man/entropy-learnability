@@ -12,11 +12,11 @@ def create_normal_unigram_table(
         Create a unigram table with roughly normally distributed probabilities.
         
         Args:
-            `vocab_size: int` - Size of the vocabulary.
-            `softmax: bool` - Whether to apply a softmax to the probabilities.
+            vocab_size: `int` - Size of the vocabulary.
+            softmax: `bool` - Whether to apply a softmax to the probabilities.
             
         Returns:
-            `Tensor` - Unigram probabilities.
+            `Tensor` - Unigram probability table.
     """
     
     unigram_probs = torch.randn(vocab_size)
@@ -45,12 +45,12 @@ def create_uniform_unigram_table(
         Create a unigram table with uniform probabilities.
         
         Args:
-            `vocab_size: int` - Size of the vocabulary.
-            `softmax: int` - Whether to apply a softmax to the probabilities.
+            vocab_size: `int` - Size of the vocabulary.
+            softmax: `bool` - Whether to apply a softmax to the probabilities.
             This option is included for consistency with other functions, but it is not necessary.
             
         Returns:
-            `Tensor` - Unigram probabilities.
+            `Tensor` - Unigram probability table.
     """
     
     unigram_probs = torch.ones(vocab_size)
