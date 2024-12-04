@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entropy and Learnability</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        iframe {
+            border: none;
+            width: 100%; /* Full width of the screen */
+            height: 70vh; /* 75% of the viewport height */
+            display: block; /* Ensure no extra spacing */
+        }
+        h2 {
+            text-align: center;
+        }
+        h3 {
+            text-align: center;
+        }
+        h4 {
+            text-align: center;
+        }
+        hr {
+            width: 95%; /* 95% of the page width */
+            margin: 20px auto; /* Center the <hr> with some spacing above and below */
+            border: 1px solid #000; /* You can customize the color */
+        }
+        p {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Entropy and Learnability</h1>
+    <h2>Dan DeGenaro</h2>
+    <hr>
+    <h3>Unigrams vs. Bigrams</h3>
+    <div class="iframe-container">
+        <h4>Perplexity</h4>
+        <iframe src="plots/uni_or_bi.html" title="Perplexity, unigrams vs. bigrams"></iframe>
+    </div>
+    <div class="iframe-container">
+        <h4>Average cross-entropy</h4>
+        <iframe src="plots/uni_or_bi_ce.html" title="Average cross-entropy, unigrams vs. bigrams"></iframe>
+    </div>
+    <hr>
+    <h3>Unigrams vs. Bigrams, Distribution</h3>
+    <div class="iframe-container">
+        <h4>Perplexity</h4>
+        <iframe src="plots/uni_or_bi_dist.html" title="Perplexity, unigrams vs. bigrams and distribution type"></iframe>
+    </div>
+    <div class="iframe-container">
+        <h4>Average cross-entropy</h4>
+        <iframe src="plots/uni_or_bi_dist_ce.html" title="Average cross-entropy, unigrams vs. bigrams and distribution type"></iframe>
+    </div>
+</body>
+</html>

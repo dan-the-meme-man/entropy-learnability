@@ -40,7 +40,7 @@ def calculate_entropy_bigram(bigram_table: torch.Tensor) -> float:
     return t.item()
 
 
-
+# Find stackoverflow post about this
 def get_stationary_distribution(bigram_table: torch.Tensor) -> torch.Tensor:
     """
     Get the stationary distribution of a bigram table.

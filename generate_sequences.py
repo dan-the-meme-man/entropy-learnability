@@ -20,7 +20,7 @@ def generate_unigram_sequences_using_table(
             `torch.Tensor` - the generated sequences
     """
     
-    # generate random integers between 2 and vocab size
+    # generate random integers between 0 and vocab size
     sequences = torch.zeros(batch_size, sequence_length, dtype=torch.long)
     
     for i in range(batch_size):
@@ -51,7 +51,7 @@ def generate_bigram_sequences_using_table(
             `torch.Tensor` - the generated sequences
     """
     
-    # generate random integers between 1 and vocab size
+    # generate random integers between 0 and vocab size
     sequences = torch.zeros(batch_size, sequence_length, dtype=torch.long)
     
     for i in range(batch_size):

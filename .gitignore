@@ -6,4 +6,4 @@ models/
 *.pdf
 pmfs/
 results/
-plots/
+loss_plots/
