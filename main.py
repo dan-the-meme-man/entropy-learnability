@@ -1,19 +1,17 @@
-import os
 import argparse
+import random
 from multiprocessing import freeze_support
 
+import numpy as np
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
 from generate_sequences import *
-from unigram_tables import *
-from bigram_tables import *
+from tables import *
 from model import get_model, get_optimizer, get_scheduler
 from train_model import train_and_test
 from entropy import calculate_entropy_unigram, calculate_entropy_bigram
-
-torch.manual_seed(42)
 
 def main() -> None:
     
@@ -38,7 +36,12 @@ def main() -> None:
     argparser.add_argument('--distribution', '-d', type=str, choices=distributions)
     argparser.add_argument('--vocab_size', '-v', type=int)
     argparser.add_argument('--softmax', '-s', action='store_true')
+    argparser.add_argument('--seed', type=int, default=42)
     args = argparser.parse_args()
+    
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    random.seed(args.seed)
 
     hparams = {
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
@@ -55,7 +58,7 @@ def main() -> None:
         'eos_token_id': 1,
         'batch_size': 4,
         'sequence_length': 64,
-        'epochs': 2,
+        'epochs': 4,
         'learning_rate': 0.001,
         'warmup_steps': 100,
         'weight_decay': 0.01,
@@ -133,7 +136,7 @@ def main() -> None:
         [get_sequences() for _ in range(hparams['num_train_samples'])],
         batch_size=1,
         shuffle=True,
-        num_workers=2
+        num_workers=2,
     )
     test_loader = DataLoader(
         [get_sequences() for _ in range(hparams['num_test_samples'])],

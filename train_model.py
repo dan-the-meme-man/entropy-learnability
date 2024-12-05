@@ -38,7 +38,6 @@ def perplexity(
     model.eval()
     
     total_loss = 0
-    total_tokens = 0
     
     with torch.no_grad():
         for batch in test_loader:
@@ -55,9 +54,8 @@ def perplexity(
             loss = outputs.loss
             
             total_loss += loss.item()
-            total_tokens += input_ids.size(0) * input_ids.size(1)
             
-    return torch.exp(torch.tensor(total_loss / total_tokens)).item()
+    return torch.exp(torch.tensor(total_loss / len(test_loader))).item()
 
 
 
@@ -93,6 +91,7 @@ def train_and_test(
     print(f'Training {save_name} on {device}.')
     
     train_losses = []
+    perplexities = []
     
     for epoch in range(epochs):
         print(f'Epoch {epoch + 1}')
@@ -136,12 +135,14 @@ def train_and_test(
                 msg += f'Avg Loss: {avg_loss:.3f}, '
                 msg += f'Avg Time: {avg_time:.3f}'
                 print(msg)
+                
+        perplexities.append(perplexity(model, test_loader, device))
 
     os.makedirs('models', exist_ok=True)
     os.makedirs('results', exist_ok=True)
     with open(os.path.join('results', save_name + '.json'), 'w+', encoding='utf-8') as f:
         json.dump({
-            'train_losses': train_losses,
-            'test_set_perplexity': perplexity(model, test_loader, device),
-            'entropy': entropy
+            'test_set_perplexities': perplexities,
+            'entropy': entropy,
+            'train_losses': train_losses
         }, f, indent=4)
