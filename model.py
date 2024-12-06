@@ -2,8 +2,6 @@ import torch
 from torch import nn
 from transformers import GPT2Config, GPT2LMHeadModel
 
-torch.manual_seed(42)
-
 def get_model(**kwargs) -> GPT2LMHeadModel:
     
     """

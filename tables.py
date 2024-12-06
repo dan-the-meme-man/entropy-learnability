@@ -1,8 +1,6 @@
 import torch
 from torch import Tensor, tensor, isclose
 
-torch.manual_seed(42)
-
 def create_normal_unigram_table(
     vocab_size: int,
     softmax: bool = False

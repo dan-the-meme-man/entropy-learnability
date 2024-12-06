@@ -1,7 +1,6 @@
 from itertools import product
 
-from unigram_tables import create_uniform_unigram_table, create_normal_unigram_table
-from bigram_tables import create_normal_bigram_table, create_uneven_bigram_table
+from tables import *
 from entropy import calculate_entropy_unigram, calculate_entropy_bigram
 
 hparams = {

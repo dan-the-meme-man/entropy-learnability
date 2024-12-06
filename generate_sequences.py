@@ -1,7 +1,5 @@
 import torch
 
-torch.manual_seed(42)
-
 def generate_unigram_sequences_using_table(
     batch_size: int,
     sequence_length: int,

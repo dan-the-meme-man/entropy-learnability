@@ -9,8 +9,6 @@ from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
 from transformers import GPT2LMHeadModel
 
-torch.manual_seed(42)
-
 def free_memory() -> None:
     gc.collect()
     torch.cuda.empty_cache()
