@@ -67,8 +67,8 @@ def main() -> None:
         'adam_epsilon': 1e-8,
         'max_grad_norm': 1.0,
         'dist': args.distribution,
-        'num_train_samples': 80,#8000,
-        'num_test_samples': 20,#2000,
+        'num_train_samples': 8000,
+        'num_test_samples': 2000,
         'log_interval': 10
     }
 
