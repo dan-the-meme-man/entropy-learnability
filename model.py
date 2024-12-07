@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from transformers import GPT2Config, GPT2LMHeadModel
 
+from lstm import LSTMLMHeadModel
+
 def get_model(**kwargs) -> GPT2LMHeadModel:
     
     """
@@ -89,3 +91,8 @@ def get_scheduler(
         optimizer,
         lr_lambda=lambda step: min(step / n_steps, 1)
     )
+
+
+
+def get_lstm(**kwargs):
+    return LSTMLMHeadModel(**kwargs).to(kwargs['device'])

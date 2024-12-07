@@ -86,7 +86,6 @@ def train_and_test(
     """
     
     model.to(device)
-    print(f'Training {save_name} on {device}.')
     
     train_losses = []
     perplexities = []

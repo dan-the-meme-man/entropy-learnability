@@ -1,3 +1,4 @@
+import os
 import argparse
 import random
 from multiprocessing import freeze_support
@@ -9,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from generate_sequences import *
 from tables import *
-from model import get_model, get_optimizer, get_scheduler
+from model import get_model, get_optimizer, get_scheduler, get_lstm
 from train_model import train_and_test
 from entropy import calculate_entropy_unigram, calculate_entropy_bigram
 
@@ -37,6 +38,7 @@ def main() -> None:
     argparser.add_argument('--vocab_size', '-v', type=int)
     argparser.add_argument('--softmax', '-s', action='store_true')
     argparser.add_argument('--seed', type=int, default=42)
+    argparser.add_argument('--lstm', '-l', action='store_true')
     args = argparser.parse_args()
     
     torch.manual_seed(args.seed)
@@ -65,8 +67,8 @@ def main() -> None:
         'adam_epsilon': 1e-8,
         'max_grad_norm': 1.0,
         'dist': args.distribution,
-        'num_train_samples': 8_000,
-        'num_test_samples': 2_000,
+        'num_train_samples': 80,#8000,
+        'num_test_samples': 20,#2000,
         'log_interval': 10
     }
 
@@ -144,8 +146,22 @@ def main() -> None:
         shuffle=False,
         num_workers=2
     )
-    model = get_model(**hparams)
+    if args.lstm:
+        model = get_lstm(**hparams)
+    else:
+        model = get_model(**hparams)
     optimizer = get_optimizer(model, hparams)
+    
+    if args.lstm:
+        save_name += f'_lstm'
+        
+    print('training:', save_name)
+    print('training on:', hparams['device'])
+    print('param count:', sum(p.numel() for p in model.parameters() if p.requires_grad))
+    
+    if os.path.exists(os.path.join('results', save_name + '.json')):
+        print(f'results/{save_name} already exists. Skipping training.')
+        return
 
     train_and_test(
         model=model,
