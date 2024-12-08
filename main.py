@@ -49,7 +49,7 @@ def main() -> None:
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'vocab_size': int(args.vocab_size),
         'n_positions': 64,
-        'n_embd': 64,
+        'n_embd': 256, # originally 64
         'n_layer': 4,
         'n_head': 4,
         'resid_pdrop': 0.05,
@@ -154,6 +154,8 @@ def main() -> None:
     
     if args.lstm:
         save_name += f'_lstm'
+    if hparams['n_embd'] != 64:
+        save_name += f'_embd{hparams["n_embd"]}'
         
     print('training:', save_name)
     print('training on:', hparams['device'])
