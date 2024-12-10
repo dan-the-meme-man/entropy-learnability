@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from generate_sequences import *
 from tables import *
-from model import get_model, get_optimizer, get_scheduler, get_lstm
+from model import get_model, get_optimizer, get_scheduler, get_lstm, get_linear
 from train_model import train_and_test
 from entropy import calculate_entropy_unigram, calculate_entropy_bigram
 
@@ -39,6 +39,7 @@ def main() -> None:
     argparser.add_argument('--softmax', '-s', action='store_true')
     argparser.add_argument('--seed', type=int, default=42)
     argparser.add_argument('--lstm', '-l', action='store_true')
+    argparser.add_argument('--linear', '-r', action='store_true')
     args = argparser.parse_args()
     
     torch.manual_seed(args.seed)
@@ -46,10 +47,10 @@ def main() -> None:
     random.seed(args.seed)
 
     hparams = {
-        'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+        'device': 'cpu',#'cuda' if torch.cuda.is_available() else 'cpu',
         'vocab_size': int(args.vocab_size),
         'n_positions': 64,
-        'n_embd': 256, # originally 64
+        'n_embd': 64, # try 256
         'n_layer': 4,
         'n_head': 4,
         'resid_pdrop': 0.05,
@@ -134,32 +135,38 @@ def main() -> None:
     else:
         raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
 
-    train_loader = DataLoader(
-        [get_sequences() for _ in range(hparams['num_train_samples'])],
-        batch_size=1,
-        shuffle=True,
-        num_workers=2,
-    )
-    test_loader = DataLoader(
-        [get_sequences() for _ in range(hparams['num_test_samples'])],
-        batch_size=1,
-        shuffle=False,
-        num_workers=2
-    )
-    if args.lstm:
+    # train_loader = DataLoader(
+    #     [get_sequences() for _ in range(hparams['num_train_samples'])],
+    #     batch_size=1,
+    #     shuffle=True,
+    #     num_workers=2,
+    # )
+    # test_loader = DataLoader(
+    #     [get_sequences() for _ in range(hparams['num_test_samples'])],
+    #     batch_size=1,
+    #     shuffle=False,
+    #     num_workers=2
+    # )
+    if args.linear:
+        model = get_linear(**hparams)
+    elif args.lstm:
         model = get_lstm(**hparams)
     else:
         model = get_model(**hparams)
     optimizer = get_optimizer(model, hparams)
     
-    if args.lstm:
+    if args.linear:
+        save_name += f'_linear'
+    elif args.lstm:
         save_name += f'_lstm'
+        
     if hparams['n_embd'] != 64:
         save_name += f'_embd{hparams["n_embd"]}'
         
     print('training:', save_name)
     print('training on:', hparams['device'])
     print('param count:', sum(p.numel() for p in model.parameters() if p.requires_grad))
+    exit()
     
     if os.path.exists(os.path.join('results', save_name + '.json')):
         print(f'results/{save_name} already exists. Skipping training.')
