@@ -3,7 +3,6 @@ from torch import nn
 from transformers import GPT2Config, GPT2LMHeadModel
 
 from lstm import LSTMLMHeadModel
-from linear import LinearLMHeadModel
 
 def get_model(**kwargs) -> GPT2LMHeadModel:
     
@@ -97,6 +96,3 @@ def get_scheduler(
 
 def get_lstm(**kwargs):
     return LSTMLMHeadModel(**kwargs).to(kwargs['device'])
-
-def get_linear(**kwargs):
-    return LinearLMHeadModel(**kwargs).to(kwargs['device'])
