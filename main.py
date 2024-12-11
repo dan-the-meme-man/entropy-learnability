@@ -50,7 +50,7 @@ def main() -> None:
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'vocab_size': int(args.vocab_size),
         'n_positions': 64,
-        'n_embd': 64, # try 256
+        'n_embd': 256, # originally 64
         'n_layer': 4,
         'n_head': 4,
         'resid_pdrop': 0.05,
