@@ -63,7 +63,7 @@ elif save_name == 'bert':
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 elif save_name == 'roberta':
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-elif save_name == 'xlm-roberta':
+elif save_name == 'xlm_roberta':
     tokenizer = XLMRobertaTokenizer.from_pretrained('xlm-roberta-base')
     
 def collate_fn(data):
