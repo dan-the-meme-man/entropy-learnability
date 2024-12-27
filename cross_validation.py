@@ -117,5 +117,6 @@ for split in range(N_FOLDS):
         save_name=save_name + f'_{split}',
         scheduler=get_scheduler(optimizer, hparams['warmup_steps']),
         device=hparams['device'],
-        entropy=0
+        entropy=0,
+        text_data=True
     )
