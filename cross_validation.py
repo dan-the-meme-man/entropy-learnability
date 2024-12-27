@@ -65,6 +65,8 @@ elif save_name == 'roberta':
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 elif save_name == 'xlm_roberta':
     tokenizer = XLMRobertaTokenizer.from_pretrained('xlm-roberta-base')
+else:
+    raise ValueError('Invalid save name:', save_name)
     
 def collate_fn(data):
     return tokenizer(data, **settings)
@@ -99,9 +101,9 @@ for split in range(N_FOLDS):
         collate_fn=collate_fn
     )
     
-    optimizer = get_optimizer(model, hparams)
-    
     model = get_model(**hparams)
+    
+    optimizer = get_optimizer(model, hparams)
     
     train_and_test(
         model,
