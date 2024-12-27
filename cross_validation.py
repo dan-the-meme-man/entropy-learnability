@@ -65,6 +65,9 @@ for tokenizer, save_name in zip(
 ):
     for split in range(N_FOLDS):
         
+        print('Split:', split)
+        print('Tokenizer:', save_name)
+        
         test_data = []
         with open(f'brown_data/brown_{split}.txt', 'r', encoding='utf-8') as f:
             test_data = f.readlines()
