@@ -45,7 +45,7 @@ hparams = {
     'eos_token_id': 1,
     'batch_size': 4,
     'sequence_length': 64,
-    'epochs': 4,
+    'epochs': 10,
     'learning_rate': 0.001,
     'warmup_steps': 100,
     'weight_decay': 0.01,
