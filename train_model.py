@@ -143,7 +143,7 @@ def train_and_test(
                 msg += f'Avg Time: {avg_time:.3f}'
                 print(msg)
                 
-        perplexities.append(perplexity(model, test_loader, device))
+        perplexities.append(perplexity(model, test_loader, device, text_data))
 
     os.makedirs('models', exist_ok=True)
     os.makedirs('results', exist_ok=True)
