@@ -3,7 +3,7 @@
 #SBATCH --output="%j_%x.o"
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --time=200:00:00
+#SBATCH --time=100:00:00
 #SBATCH --mem=4G
 #SBATCH --gres=gpu:1
 
