@@ -141,7 +141,7 @@ def train_and_test(
                 msg += f'Loss: {loss_val:.3f}, '
                 msg += f'Avg Loss: {avg_loss:.3f}, '
                 msg += f'Avg Time: {avg_time:.3f}'
-                print(msg)
+                print(msg, flush=True)
                 
         perplexities.append(perplexity(model, test_loader, device, text_data))
 

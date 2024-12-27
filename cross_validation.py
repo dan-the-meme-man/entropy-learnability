@@ -73,11 +73,11 @@ hparams['vocab_size'] = tokenizer.vocab_size
 def collate_fn(data):
     return tokenizer(data, **settings)
 
-print('Using tokenizer:', save_name)
+print('Using tokenizer:', save_name, flush=True)
 
 for split in range(N_FOLDS):
     
-    print('Split:', split)
+    print('Split:', split, flush=True)
     
     test_data = []
     with open(f'brown_data/brown_{split}.txt', 'r', encoding='utf-8') as f:
