@@ -18,7 +18,8 @@ def free_memory() -> None:
 def perplexity(
     model: GPT2LMHeadModel,
     test_loader: DataLoader,
-    device: str
+    device: str,
+    text_data: bool = False
 ) -> float:
     
     """
@@ -38,14 +39,18 @@ def perplexity(
     total_loss = 0
     
     with torch.no_grad():
-        for batch in test_loader:
+        for inputs in test_loader:
             
-            input_ids = batch.squeeze(0).to(device)
-            attention_mask = torch.ones_like(input_ids).to(device)
+            if text_data:
+                input_ids = inputs['input_ids']
+                attention_mask = inputs['attention_mask']
+            else:
+                input_ids = inputs.squeeze(0)
+                attention_mask = torch.ones_like(input_ids)
             
             inputs = {
-                'input_ids': input_ids,
-                'attention_mask': attention_mask
+                'input_ids': input_ids.to(device),
+                'attention_mask': attention_mask.to(device)
             }
             
             outputs = model(**inputs, labels=inputs['input_ids'])
@@ -67,7 +72,8 @@ def train_and_test(
     save_name: str,
     scheduler: _LRScheduler,
     device: str,
-    entropy: float
+    entropy: float,
+    text_data: bool = False
 ) -> None:
     
     """
@@ -100,16 +106,20 @@ def train_and_test(
         start = time()
         total_loss_this_epoch = 0.0
         
-        for i, batch in enumerate(train_loader):
+        for i, inputs in enumerate(train_loader):
             
             optimizer.zero_grad()
             
-            input_ids = batch.squeeze(0).to(device)
-            attention_mask = torch.ones_like(input_ids).to(device)
+            if text_data:
+                input_ids = inputs['input_ids']
+                attention_mask = inputs['attention_mask']
+            else:
+                input_ids = inputs.squeeze(0).to(device)
+                attention_mask = torch.ones_like(input_ids).to(device)
             
             inputs = {
-                'input_ids': input_ids,
-                'attention_mask': attention_mask
+                'input_ids': input_ids.to(device),
+                'attention_mask': attention_mask.to(device)
             }
             
             outputs = model(**inputs, labels=inputs['input_ids'])
