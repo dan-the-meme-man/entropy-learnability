@@ -67,7 +67,9 @@ elif save_name == 'xlm_roberta':
     tokenizer = XLMRobertaTokenizer.from_pretrained('xlm-roberta-base')
 else:
     raise ValueError('Invalid save name:', save_name)
-    
+
+hparams['vocab_size'] = tokenizer.vocab_size
+
 def collate_fn(data):
     return tokenizer(data, **settings)
 
