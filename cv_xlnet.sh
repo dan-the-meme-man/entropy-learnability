@@ -12,4 +12,4 @@ module load gcc/11.4.0
 
 nvidia-smi
 
-python cross_validation.py "xlm-roberta-base"
+python cross_validation.py "xlnet/xlnet-base-cased"

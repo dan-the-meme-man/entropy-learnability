@@ -5,12 +5,7 @@ import random
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
-from transformers import (
-    GPT2Tokenizer,
-    BertTokenizer,
-    RobertaTokenizer,
-    XLMRobertaTokenizer,
-)
+from transformers import AutoTokenizer
 
 from train_model import train_and_test
 from model import get_model, get_optimizer, get_scheduler
@@ -56,17 +51,9 @@ hparams = {
 
 save_name = sys.argv[1]
 
-if save_name == 'gpt2':
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+tokenizer = AutoTokenizer.from_pretrained(save_name)
+if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
-elif save_name == 'bert':
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-elif save_name == 'roberta':
-    tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-elif save_name == 'xlm_roberta':
-    tokenizer = XLMRobertaTokenizer.from_pretrained('xlm-roberta-base')
-else:
-    raise ValueError('Invalid save name:', save_name)
 
 hparams['vocab_size'] = tokenizer.vocab_size
 
