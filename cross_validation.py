@@ -54,6 +54,8 @@ save_name = sys.argv[1]
 tokenizer = AutoTokenizer.from_pretrained(save_name)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
+    
+save_name = save_name.split('/')[-1].replace('-', '_')
 
 hparams['vocab_size'] = tokenizer.vocab_size
 
