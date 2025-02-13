@@ -30,15 +30,19 @@ def calculate_entropy_bigram(bigram_table: torch.Tensor) -> float:
         `float` - the entropy of the bigram table.
     """
     
+    # p(symbol)
     p = get_stationary_distribution(bigram_table)
     
+    # broadcast p(symbol) to the normalized rows of the transition matrix
     joint_probs = p[:, None] * bigram_table
     
+    # -sum(p * log p)
     try:
         t = -1 * (joint_probs * joint_probs.log()).sum()
     except:
         t = -1 * (joint_probs * (joint_probs + 1e-10).log()).sum()
-        
+    
+    # return scalar
     return t.item()
 
 
@@ -54,10 +58,19 @@ def get_stationary_distribution(bigram_table: torch.Tensor) -> torch.Tensor:
         `torch.Tensor` - the stationary distribution.
     """
     
+    # vocab size
     n = bigram_table.shape[0]
+    
+    # init p(symbol)
     p = torch.ones(n) / n
+    
+    # iterate enough times
     for _ in range(10 * n):
+        
+        # step towards eigenvector
         p_next = p @ bigram_table
+        
+        # if converged, done
         if torch.norm(p_next - p) < 1e-8:
             break
         p = p_next
@@ -83,19 +96,23 @@ def calculate_transient_entropy(
         `float` - the entropy of the bigram table.
     """
     
+    # get p(symbol)
     p = sample_bigram_seqs_to_convergence(
         bigram_table,
         max_length,
         batch_size
     )
     
+    # broadcast copies of p
     joint_probs = p[:, None] * bigram_table
     
+    # entropy = -sum(p * log p)
     try:
         t = -1 * (joint_probs * joint_probs.log()).sum()
     except:
         t = -1 * (joint_probs * (joint_probs + 1e-10).log()).sum()
-        
+    
+    # return scalar
     return t.item()
 
 
@@ -105,18 +122,27 @@ def sample_bigram_seqs_to_convergence(
     batch_size: int = 256
 ):
     device = bigram_table.device  # gpu if possible
+    
+    # count of each symbol in the generated sequences
     counts = torch.zeros(len(bigram_table), device=device, dtype=torch.float32)
+    
+    # vocab size
     n = bigram_table.shape[0]
+    
+    # initialize p(symbol)
     p = torch.full((n,), 1 / n, device=device, dtype=torch.float32)
 
+    # iterate plenty of times
     for i in range(1000 * n):
         counts_sum = counts.sum().clamp(min=1e-8)  # Avoid division by zero
-        p_next = counts / counts_sum
+        p_next = counts / counts_sum # current estimates of p(symbol)
 
         if i % 50 == 0:  # Compute norm less frequently for speedup
+            
+            # difference between current next estimate and current estimate
             norm = torch.norm(p_next - p)
             print(f"Iteration {i}, Norm: {norm.item():.6f}")
-            if norm < 1e-8: # TODO: set more reasonable threshold
+            if norm < 1e-8: # TODO: set more reasonable threshold - maybe 2e-5
                 break
         p = p_next
 
@@ -129,9 +155,12 @@ def sample_bigram_seqs_to_convergence(
 
         # Ensure seqs is on the same device before calling `.unique`
         seqs = seqs.to(device)
+        
+        # get counts of unique symbols
         uc, uc_counts = seqs.unique(return_counts=True)
 
         # GPU-optimized scatter_add_
+        # add to running counts
         counts.scatter_add_(0, uc, uc_counts.to(counts.dtype))
 
     return p
