@@ -80,17 +80,17 @@ def get_stationary_distribution(bigram_table: torch.Tensor) -> torch.Tensor:
 
 def calculate_transient_entropy(
     bigram_table: torch.Tensor,
-    max_length: int = 128,
-    batch_size: int = 256
-):
+    max_length: int,
+    batch_size: int
+) -> float:
     """
     Calculate entropy of a bigram table weighted by transient state probabilities
     derived by sampling.
     
     Args:
         bigram_table: `torch.Tensor` - the bigram table.
-        max_length: `int` - maximum sequence length.
-        batch_size: `int` - number of sequences to generate in parallel.
+        max_length: `int` - maximum sequence length to generate.
+        batch_size: `int` - number of sequences to generate in parallel when sampling.
         
     Returns:
         `float` - the entropy of the bigram table.
@@ -118,9 +118,22 @@ def calculate_transient_entropy(
 
 def sample_bigram_seqs_to_convergence(
     bigram_table: torch.Tensor,
-    max_length: int = 128,
-    batch_size: int = 256
-):
+    max_length: int,
+    batch_size: int
+) -> torch.Tensor:
+    
+    """
+    Calculate the probability of all symbols in randomly sampled data to convergence.
+    
+    Args:
+        bigram_table: `torch.Tensor` - the bigram table.
+        max_length: `int` - maximum sequence length.
+        batch_size: `int` - number of sequences to generate in parallel.
+        
+    Returns:
+        `torch.Tensor` - probabilities of each symbol.
+    """
+    
     device = bigram_table.device  # gpu if possible
     
     # count of each symbol in the generated sequences
