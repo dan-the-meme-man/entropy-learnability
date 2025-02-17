@@ -40,7 +40,7 @@ hparams = {
     'eos_token_id': 1,
     'batch_size': 4,
     'sequence_length': 64,
-    'epochs': 10,
+    'epochs': 20,
     'learning_rate': 0.001,
     'warmup_steps': 100,
     'weight_decay': 0.01,
@@ -53,7 +53,7 @@ save_name = sys.argv[1]
 
 tokenizer = AutoTokenizer.from_pretrained(save_name)
 if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 if 'gpt' in save_name:
     tokenizer.pad_token = tokenizer.eos_token
     
