@@ -12,6 +12,8 @@ module load gcc/11.4.0
 
 nvidia-smi
 
+conda activate entropy
+
 python main.py -d normal_bigrams -v 10 -l
 
 python main.py -d normal_bigrams -v 25 -l

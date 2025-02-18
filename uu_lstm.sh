@@ -12,6 +12,8 @@ module load gcc/11.4.0
 
 nvidia-smi
 
+conda activate entropy
+
 python main.py -d uniform_unigrams -v 10 -l
 
 python main.py -d uniform_unigrams -v 25 -l

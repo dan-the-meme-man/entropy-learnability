@@ -164,13 +164,13 @@ def main() -> None:
         [get_sequences() for _ in range(hparams['num_train_samples'])],
         batch_size=1,
         shuffle=True,
-        num_workers=2,
+        num_workers=1,
     )
     test_loader = DataLoader(
         [get_sequences() for _ in range(hparams['num_test_samples'])],
         batch_size=1,
         shuffle=False,
-        num_workers=2
+        num_workers=1
     )
     if args.ffnn:
         model = get_ffnn(**hparams)
