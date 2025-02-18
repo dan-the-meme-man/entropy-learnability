@@ -73,6 +73,7 @@ def train_and_test(
     scheduler: _LRScheduler,
     device: str,
     entropy: float,
+    transient_entropy: float,
     text_data: bool = False
 ) -> None:
     
@@ -151,5 +152,6 @@ def train_and_test(
         json.dump({
             'test_set_perplexities': perplexities,
             'entropy': entropy,
+            'transient_entropy': transient_entropy,
             'train_losses': train_losses
         }, f, indent=4)

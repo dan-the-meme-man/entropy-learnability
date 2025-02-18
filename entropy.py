@@ -1,6 +1,7 @@
 import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from generate_sequences import generate_bigram_sequences_using_table
+from generate_sequences import generate_bigram_sequences_using_table, generate_unigram_sequences_using_table
 
 def calculate_entropy_unigram(unigram_table: torch.Tensor) -> float:
     """
@@ -78,7 +79,34 @@ def get_stationary_distribution(bigram_table: torch.Tensor) -> torch.Tensor:
 
 
 
-def calculate_transient_entropy(
+def calculate_transient_entropy_unigram(
+    unigram_table: torch.Tensor,
+    max_length: int,
+    batch_size: int
+) -> float:
+    """
+    Calculate entropy of a unigram table.
+    
+    Args:
+        unigram_table: `torch.Tensor` - the unigram table.
+        
+    Returns:
+        `float` - the entropy of the unigram table.
+    """
+    
+    p = sample_unigram_seqs_to_convergence(
+        unigram_table,
+        max_length,
+        batch_size
+    )
+    
+    t = -1 * (p * p.log()).sum()
+    
+    return t.item()
+
+
+
+def calculate_transient_entropy_bigram(
     bigram_table: torch.Tensor,
     max_length: int,
     batch_size: int
@@ -116,6 +144,68 @@ def calculate_transient_entropy(
     return t.item()
 
 
+
+def sample_unigram_seqs_to_convergence(
+    unigram_table: torch.Tensor,
+    max_length: int,
+    batch_size: int
+) -> torch.Tensor:
+    """
+    Calculate the probability of all symbols in randomly sampled data to convergence.
+    
+    Args:
+        unigram_table: `torch.Tensor` - the unigram table.
+        max_length: `int` - maximum sequence length.
+        batch_size: `int` - number of sequences to generate in parallel.
+    
+    Returns:
+        `torch.Tensor` - probabilities of each symbol.
+    """
+    
+    # count of each symbol in the generated sequences
+    counts = torch.zeros(len(unigram_table), device=device, dtype=torch.float32)
+    
+    # vocab size
+    n = unigram_table.shape[0]
+    
+    # initialize p(symbol)
+    p = torch.full((n,), 1 / n, device=device, dtype=torch.float32)
+
+    # iterate plenty of times
+    for i in range(1000 * n):
+        counts_sum = counts.sum().clamp(min=1e-8)  # Avoid division by zero
+        p_next = counts / counts_sum # current estimates of p(symbol)
+
+        if i % 50 == 0:  # Compute norm less frequently for speedup
+            
+            # difference between current next estimate and current estimate
+            norm = torch.norm(p_next - p)
+            print(f"Iteration {i}, Norm: {norm.item():.6f}")
+            if norm < 2e-5: # TODO: set more reasonable threshold - maybe 2e-5
+                break
+        p = p_next
+
+        # Generate unigram sequences in larger batches to better utilize GPU
+        seqs = generate_unigram_sequences_using_table(
+            batch_size,
+            max_length,
+            unigram_table
+        )
+
+        # Ensure seqs is on the same device before calling `.unique`
+        seqs = seqs.to(device)
+        
+        # get counts of unique symbols
+        uc, uc_counts = seqs.unique(return_counts=True)
+
+        # GPU-optimized scatter_add_
+        # add to running counts
+        counts.scatter_add_(0, uc, uc_counts.to(counts.dtype))
+
+    return p
+
+
+
 def sample_bigram_seqs_to_convergence(
     bigram_table: torch.Tensor,
     max_length: int,
@@ -133,8 +223,6 @@ def sample_bigram_seqs_to_convergence(
     Returns:
         `torch.Tensor` - probabilities of each symbol.
     """
-    
-    device = bigram_table.device  # gpu if possible
     
     # count of each symbol in the generated sequences
     counts = torch.zeros(len(bigram_table), device=device, dtype=torch.float32)
@@ -155,7 +243,7 @@ def sample_bigram_seqs_to_convergence(
             # difference between current next estimate and current estimate
             norm = torch.norm(p_next - p)
             print(f"Iteration {i}, Norm: {norm.item():.6f}")
-            if norm < 1e-8: # TODO: set more reasonable threshold - maybe 2e-5
+            if norm < 2e-5: # TODO: set more reasonable threshold - maybe 2e-5
                 break
         p = p_next
 

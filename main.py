@@ -12,7 +12,12 @@ from generate_sequences import *
 from tables import *
 from model import get_model, get_optimizer, get_scheduler, get_lstm, get_ffnn
 from train_model import train_and_test
-from entropy import calculate_entropy_unigram, calculate_entropy_bigram
+from entropy import (
+    calculate_entropy_unigram,
+    calculate_entropy_bigram,
+    calculate_transient_entropy_bigram,
+    calculate_transient_entropy_unigram
+)
 
 def main() -> None:
     
@@ -90,6 +95,11 @@ def main() -> None:
             )
             
         entropy = calculate_entropy_unigram(unigram_probs)
+        transient_entropy = calculate_transient_entropy_unigram(
+            unigram_probs,
+            hparams['sequence_length'],
+            hparams['batch_size']
+        )
     elif hparams['dist'] == 'normal_unigrams':
         unigram_probs = create_normal_unigram_table(
             hparams['vocab_size'],
@@ -104,6 +114,11 @@ def main() -> None:
             )
             
         entropy = calculate_entropy_unigram(unigram_probs)
+        transient_entropy = calculate_transient_entropy_unigram(
+            unigram_probs,
+            hparams['sequence_length'],
+            hparams['batch_size']
+        )
     elif hparams['dist'] == 'normal_bigrams':
         bigram_probs = create_normal_bigram_table(
             hparams['vocab_size'],
@@ -118,6 +133,11 @@ def main() -> None:
             )
         
         entropy = calculate_entropy_bigram(bigram_probs)
+        transient_entropy = calculate_transient_entropy_bigram(
+            bigram_probs,
+            hparams['sequence_length'],
+            hparams['batch_size']
+        )
     elif hparams['dist'] == 'uneven_bigrams':
         bigram_probs = create_uneven_bigram_table(
             hparams['vocab_size'],
@@ -132,6 +152,11 @@ def main() -> None:
             )
             
         entropy = calculate_entropy_bigram(bigram_probs)
+        transient_entropy = calculate_transient_entropy_bigram(
+            bigram_probs,
+            hparams['sequence_length'],
+            hparams['batch_size']
+        )
     else:
         raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
 
@@ -181,7 +206,8 @@ def main() -> None:
         save_name=save_name,
         scheduler=get_scheduler(optimizer, hparams['warmup_steps']),
         device=hparams['device'],
-        entropy=entropy
+        entropy=entropy,
+        transient_entropy=transient_entropy
     )
     
 if __name__ == '__main__':
