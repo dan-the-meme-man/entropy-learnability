@@ -14,6 +14,10 @@ def calculate_entropy_unigram(unigram_table: torch.Tensor) -> float:
         `float` - the entropy of the unigram table.
     """
     
+    assert torch.isclose(unigram_table.sum(), torch.tensor(1.0))
+    
+    unigram_table = unigram_table.to(device)
+    
     t = -1 * (unigram_table * unigram_table.log()).sum()
     
     return t.item()
@@ -31,8 +35,13 @@ def calculate_entropy_bigram(bigram_table: torch.Tensor) -> float:
         `float` - the entropy of the bigram table.
     """
     
+    # assert that the rows sum to 1
+    assert torch.allclose(bigram_table.sum(1), torch.tensor(1.0))
+    
+    bigram_table = bigram_table.to(device)
+    
     # p(symbol)
-    p = get_stationary_distribution(bigram_table)
+    p = _get_stationary_distribution(bigram_table)
     
     # broadcast p(symbol) to the normalized rows of the transition matrix
     joint_probs = p[:, None] * bigram_table
@@ -48,7 +57,7 @@ def calculate_entropy_bigram(bigram_table: torch.Tensor) -> float:
 
 
 # TODO: Find stackoverflow post about this
-def get_stationary_distribution(bigram_table: torch.Tensor) -> torch.Tensor:
+def _get_stationary_distribution(bigram_table: torch.Tensor) -> torch.Tensor:
     """
     Get the stationary distribution of a bigram table.
     
@@ -59,11 +68,15 @@ def get_stationary_distribution(bigram_table: torch.Tensor) -> torch.Tensor:
         `torch.Tensor` - the stationary distribution.
     """
     
+    bigram_table = bigram_table.to(device)
+    
     # vocab size
     n = bigram_table.shape[0]
     
     # init p(symbol)
     p = torch.ones(n) / n
+    
+    p = p.to(device)
     
     # iterate enough times
     for _ in range(10 * n):
@@ -94,6 +107,10 @@ def calculate_transient_entropy_unigram(
         `float` - the entropy of the unigram table.
     """
     
+    assert torch.isclose(unigram_table.sum(), torch.tensor(1.0))
+    
+    unigram_table = unigram_table.to(device)
+    
     p = sample_unigram_seqs_to_convergence(
         unigram_table,
         max_length,
@@ -123,6 +140,11 @@ def calculate_transient_entropy_bigram(
     Returns:
         `float` - the entropy of the bigram table.
     """
+    
+    # assert that the rows sum to 1
+    assert torch.allclose(bigram_table.sum(1), torch.tensor(1.0))
+    
+    bigram_table = bigram_table.to(device)
     
     # get p(symbol)
     p = sample_bigram_seqs_to_convergence(

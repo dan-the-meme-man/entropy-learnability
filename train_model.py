@@ -91,6 +91,9 @@ def train_and_test(
             scheduler: `_LRScheduler` - Learning rate scheduler.
             device: `str` - Device to train on.
     """
+    if os.path.exists(os.path.join('results', save_name + '.json')):
+        print(f'results/{save_name} already exists. Skipping training.')
+        return
     
     model.to(device)
     
