@@ -3,7 +3,6 @@ from torch import nn
 from transformers import GPT2Config, GPT2LMHeadModel
 
 from lstm import LSTMLMHeadModel
-from ffnn import FFNNLMHeadModel
 
 def get_model(**kwargs) -> GPT2LMHeadModel:
     
@@ -40,7 +39,8 @@ def get_model(**kwargs) -> GPT2LMHeadModel:
         attn_pdrop=kwargs['attn_pdrop'],
         summary_first_dropout=kwargs['summary_first_dropout'],
         bos_token_id=kwargs['bos_token_id'],
-        eos_token_id=kwargs['eos_token_id']
+        eos_token_id=kwargs['eos_token_id'],
+        pad_token_id=kwargs['pad_token_id'],
     )
     
     return GPT2LMHeadModel(config).to(kwargs['device'])
@@ -97,5 +97,3 @@ def get_scheduler(
 
 def get_lstm(**kwargs):
     return LSTMLMHeadModel(**kwargs).to(kwargs['device'])
-def get_ffnn(**kwargs):
-    return FFNNLMHeadModel(**kwargs).to(kwargs['device'])

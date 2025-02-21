@@ -74,6 +74,7 @@ def train_and_test(
     device: str,
     entropy: float,
     transient_entropy: float,
+    table: torch.Tensor,
     text_data: bool = False
 ) -> None:
     
@@ -152,9 +153,15 @@ def train_and_test(
     os.makedirs('models', exist_ok=True)
     os.makedirs('results', exist_ok=True)
     with open(os.path.join('results', save_name + '.json'), 'w+', encoding='utf-8') as f:
+        
+        # transient entropy is a float, but could be nan
+        if transient_entropy != transient_entropy:
+            transient_entropy = 'nan'
+        
         json.dump({
             'test_set_perplexities': perplexities,
             'entropy': entropy,
             'transient_entropy': transient_entropy,
+            'table': table.tolist() if table is not None else None,
             'train_losses': train_losses
         }, f, indent=4)

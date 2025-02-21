@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from generate_sequences import *
 from tables import *
-from model import get_model, get_optimizer, get_scheduler, get_lstm, get_ffnn
+from model import get_model, get_optimizer, get_scheduler, get_lstm
 from train_model import train_and_test
 from entropy import (
     calculate_entropy_unigram,
@@ -35,17 +35,23 @@ def main() -> None:
         'uniform_unigrams',
         'normal_unigrams',
         'normal_bigrams',
-        'uneven_bigrams'
+        'uneven_bigrams',
+        'manual_unigrams',
+        'manual_bigrams'
     ]
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--distribution', '-d', type=str, choices=distributions)
-    argparser.add_argument('--vocab_size', '-v', type=int)
+    argparser.add_argument('--vocab_size', '-v', type=int, default=-1)
     argparser.add_argument('--softmax', '-s', action='store_true')
     argparser.add_argument('--seed', type=int, default=42)
     argparser.add_argument('--lstm', '-l', action='store_true')
-    argparser.add_argument('--ffnn', '-f', action='store_true')
+    argparser.add_argument('--manual_option', '-m', type=float, default=0.0)
     args = argparser.parse_args()
+    if args.manual_option  == 0.0 and args.distribution in ['manual_unigrams', 'manual_bigrams']:
+        raise ValueError('Please provide a manual option for the distribution.')
+    if args.manual_option != 0.0 and args.distribution in ['manual_unigrams', 'manual_bigrams']:
+        args.softmax = False
     
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -55,7 +61,7 @@ def main() -> None:
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'vocab_size': int(args.vocab_size),
         'n_positions': 64,
-        'n_embd': 256, # originally 64
+        'n_embd': 64, # 64, 256
         'n_layer': 4,
         'n_head': 4,
         'resid_pdrop': 0.05,
@@ -64,6 +70,7 @@ def main() -> None:
         'summary_first_dropout': 0.05,
         'bos_token_id': 0,
         'eos_token_id': 1,
+        'pad_token_id': 2,
         'batch_size': 4,
         'sequence_length': 64,
         'epochs': 4,
@@ -75,127 +82,115 @@ def main() -> None:
         'dist': args.distribution,
         'num_train_samples': 8000,
         'num_test_samples': 2000,
-        'log_interval': 10
+        'log_interval': 10,
+        'manual_option': args.manual_option
     }
-
-    save_name = f'{hparams["dist"]}_{hparams["vocab_size"]}'
-    save_name += f'_{"softmax" if args.softmax else "nosoftmax"}'
     
     if hparams['dist'] == 'uniform_unigrams':
-        unigram_probs = create_uniform_unigram_table(
+        probs = create_uniform_unigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
-        )
-        
-        def get_sequences() -> Tensor:
-            return generate_unigram_sequences_using_table(
-                hparams['batch_size'],
-                hparams['sequence_length'],
-                unigram_probs
-            )
-            
-        entropy = calculate_entropy_unigram(unigram_probs)
-        transient_entropy = calculate_transient_entropy_unigram(
-            unigram_probs,
-            hparams['sequence_length'],
-            hparams['batch_size']
         )
     elif hparams['dist'] == 'normal_unigrams':
-        unigram_probs = create_normal_unigram_table(
+        probs = create_normal_unigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
-        )
-        
-        def get_sequences() -> Tensor:
-            return generate_unigram_sequences_using_table(
-                hparams['batch_size'],
-                hparams['sequence_length'],
-                unigram_probs
-            )
-            
-        entropy = calculate_entropy_unigram(unigram_probs)
-        transient_entropy = calculate_transient_entropy_unigram(
-            unigram_probs,
-            hparams['sequence_length'],
-            hparams['batch_size']
         )
     elif hparams['dist'] == 'normal_bigrams':
-        bigram_probs = create_normal_bigram_table(
+        probs = create_normal_bigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
-        )
-        
-        def get_sequences() -> Tensor:
-            return generate_bigram_sequences_using_table(
-                hparams['batch_size'],
-                hparams['sequence_length'],
-                bigram_probs
-            )
-        
-        entropy = calculate_entropy_bigram(bigram_probs)
-        transient_entropy = calculate_transient_entropy_bigram(
-            bigram_probs,
-            hparams['sequence_length'],
-            hparams['batch_size']
         )
     elif hparams['dist'] == 'uneven_bigrams':
-        bigram_probs = create_uneven_bigram_table(
+        probs = create_uneven_bigram_table(
             hparams['vocab_size'],
             softmax=args.softmax
         )
-        
-        def get_sequences() -> Tensor:
-            return generate_bigram_sequences_using_table(
-                hparams['batch_size'],
-                hparams['sequence_length'],
-                bigram_probs
-            )
-            
-        entropy = calculate_entropy_bigram(bigram_probs)
-        transient_entropy = calculate_transient_entropy_bigram(
-            bigram_probs,
-            hparams['sequence_length'],
-            hparams['batch_size']
-        )
+    elif hparams['dist'] == 'manual_unigrams':
+        probs = manual_unigram_table(hparams['manual_option'])
+        hparams['vocab_size'] = len(probs)  
+    elif hparams['dist'] == 'manual_bigrams':
+        probs = manual_bigram_table(hparams['manual_option'])
+        hparams['vocab_size'] = len(probs)
     else:
         raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
-
-    train_loader = DataLoader(
-        [get_sequences() for _ in range(hparams['num_train_samples'])],
-        batch_size=1,
-        shuffle=True,
-        num_workers=1,
-    )
-    test_loader = DataLoader(
-        [get_sequences() for _ in range(hparams['num_test_samples'])],
-        batch_size=1,
-        shuffle=False,
-        num_workers=1
-    )
-    if args.ffnn:
-        model = get_ffnn(**hparams)
-    elif args.lstm:
-        model = get_lstm(**hparams)
-    else:
-        model = get_model(**hparams)
-    optimizer = get_optimizer(model, hparams)
     
-    if args.ffnn:
-        save_name += f'_ffnn'
-    elif args.lstm:
+    if 'unigrams' in hparams['dist']:
+        entropy_calc = calculate_entropy_unigram
+        transient_entropy_calc = calculate_transient_entropy_unigram
+    elif 'bigrams' in hparams['dist']:
+        entropy_calc = calculate_entropy_bigram
+        transient_entropy_calc = calculate_transient_entropy_bigram
+    else:
+        raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
+    
+    def get_sequences() -> Tensor:
+        return generate_unigram_sequences_using_table(
+            hparams['batch_size'],
+            hparams['sequence_length'],
+            probs,
+            hparams['bos_token_id'],
+            hparams['eos_token_id'],
+            hparams['pad_token_id']
+        )
+    
+    save_name = f'{hparams["dist"]}_{hparams["vocab_size"]}'
+    save_name += f'_{"softmax" if args.softmax else "nosoftmax"}'
+    if args.manual_option:
+        save_name += f'_manual_{args.manual_option}'
+    if args.lstm:
         save_name += f'_lstm'
-        
     if hparams['n_embd'] != 64:
-        save_name += f'_embd{hparams["n_embd"]}'
+        save_name += f'_embd_{hparams["n_embd"]}'
         
     print('training:', save_name)
     print('training on:', hparams['device'])
-    print('param count:', sum(p.numel() for p in model.parameters() if p.requires_grad))
     
     if os.path.exists(os.path.join('results', save_name + '.json')):
         print(f'results/{save_name} already exists. Skipping training.')
         return
 
+    print('Loading training data...')
+    l_train = []
+    for _ in range(hparams['num_train_samples']):
+        l_train.append(get_sequences())
+        if len(l_train) % 100 == 0:
+            print(f'{len(l_train)} / {hparams["num_train_samples"]}')
+    train_loader = DataLoader(
+        l_train,
+        batch_size=1,
+        shuffle=True,
+        num_workers=1,
+    )
+    print('Loading test data...')
+    l_test = []
+    for _ in range(hparams['num_test_samples']):
+        l_test.append(get_sequences())
+        if len(l_test) % 100 == 0:
+            print(f'{len(l_test)} / {hparams["num_test_samples"]}')
+    test_loader = DataLoader(
+        l_test,
+        batch_size=1,
+        shuffle=False,
+        num_workers=1
+    )
+    if args.lstm:
+        model = get_lstm(**hparams)
+    else:
+        model = get_model(**hparams)
+    print('param count:', sum(p.numel() for p in model.parameters() if p.requires_grad))
+    optimizer = get_optimizer(model, hparams)
+
+    entropy = entropy_calc(probs)
+    transient_entropy = transient_entropy_calc(
+        probs,
+        hparams['sequence_length'],
+        hparams['batch_size'],
+        hparams['bos_token_id'],
+        hparams['eos_token_id'],
+        hparams['pad_token_id']
+    )
+    
     train_and_test(
         model=model,
         train_loader=train_loader,
@@ -207,7 +202,8 @@ def main() -> None:
         scheduler=get_scheduler(optimizer, hparams['warmup_steps']),
         device=hparams['device'],
         entropy=entropy,
-        transient_entropy=transient_entropy
+        transient_entropy=transient_entropy,
+        table=probs
     )
     
 if __name__ == '__main__':

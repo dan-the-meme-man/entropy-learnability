@@ -179,3 +179,67 @@ def create_normal_trigram_table(
     assert torch.isclose(trigram_probs.sum(dim=-1), torch.tensor(1.0)).all()
     
     return trigram_probs
+
+
+
+def manual_unigram_table(manual_option: float) -> Tensor:
+    
+    """
+        Create a manual unigram table.
+        
+        Returns:
+            `torch.Tensor` - Manual unigram table.
+    """
+    
+    if manual_option == 0.8:
+        n = 8192
+        unigram_probs = torch.tensor(
+            [0.8] + [0.2 / n] * n
+        )
+    elif manual_option == 0.7:
+        n = 282
+        unigram_probs = torch.tensor(
+            [0.7] + [0.3 / n] * n
+        )
+    elif manual_option == 0.6:
+        n = 59
+        unigram_probs = torch.tensor(
+            [0.6] + [0.4 / n] * n
+        )
+    elif manual_option == 0.5:
+        n = 25
+        unigram_probs = torch.tensor(
+            [0.5] + [0.5 / n] * n
+        )
+    else:
+        raise ValueError('Invalid manual option.')
+    
+    unigram_probs.requires_grad = False
+    
+    assert isclose(unigram_probs.sum(), tensor(1.0))
+    
+    return unigram_probs
+
+
+
+def manual_bigram_table() -> Tensor:
+    
+    """
+        Create a manual bigram table.
+        
+        Returns:
+            `torch.Tensor` - Manual bigram table.    
+    """
+    
+    bigram_probs = torch.tensor([
+        [0.1, 0.2, 0.3, 0.4],
+        [0.4, 0.3, 0.2, 0.1],
+        [0.2, 0.3, 0.4, 0.1],
+        [0.3, 0.2, 0.1, 0.4]
+    ])
+    
+    bigram_probs.requires_grad = False
+    
+    assert torch.isclose(bigram_probs.sum(1), torch.tensor(1.0)).all()
+    
+    return bigram_probs

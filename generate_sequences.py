@@ -3,7 +3,11 @@ import torch
 def generate_unigram_sequences_using_table(
     batch_size: int,
     sequence_length: int,
-    unigram_probs: torch.Tensor
+    unigram_probs: torch.Tensor,
+    bos_token_id: int,
+    eos_token_id: int,
+    pad_token_id: int,
+    stop_states: tuple = (3,)
 ) -> torch.Tensor:
     
     """
@@ -20,10 +24,21 @@ def generate_unigram_sequences_using_table(
     
     # generate random integers between 0 and vocab size
     sequences = torch.zeros(batch_size, sequence_length, dtype=torch.long)
+    sequences[:, 0] = bos_token_id
     
     for i in range(batch_size):
         for j in range(sequence_length):
-            sequences[i, j] = torch.multinomial(unigram_probs, 1)
+            sampled_id = torch.multinomial(unigram_probs, 1)
+            if sampled_id in stop_states:
+                sequences[i, j] = sampled_id
+                break
+            sequences[i, j] = sampled_id
+        if j != sequence_length - 1:
+            sequences[i, j + 1] = eos_token_id
+            for k in range(j + 2, sequence_length):
+                sequences[i, k] = pad_token_id
+        else:
+            sequences[i, j] = eos_token_id
             
     sequences.requires_grad = False
     
@@ -34,7 +49,11 @@ def generate_unigram_sequences_using_table(
 def generate_bigram_sequences_using_table(
     batch_size: int,
     sequence_length: int,
-    bigram_probs: torch.Tensor
+    bigram_probs: torch.Tensor,
+    bos_token_id: int,
+    eos_token_id: int,
+    pad_token_id: int,
+    stop_states: tuple = (3,)
 ) -> torch.Tensor:
     
     """
@@ -51,14 +70,21 @@ def generate_bigram_sequences_using_table(
     
     # generate random integers between 0 and vocab size
     sequences = torch.zeros(batch_size, sequence_length, dtype=torch.long)
+    sequences[:, 0] = bos_token_id
     
     for i in range(batch_size):
-        
         for j in range(sequence_length):
-            sequences[i, j] = torch.multinomial(
-                bigram_probs[sequences[i, j - 1]],
-                1
-            )
+            sampled_id = torch.multinomial(bigram_probs[sequences[i, j - 1]], 1)
+            if sampled_id in stop_states:
+                sequences[i, j] = sampled_id
+                break
+            sequences[i, j] = sampled_id
+        if j != sequence_length - 1:
+            sequences[i, j+1] = eos_token_id
+            for k in range(j+2, sequence_length):
+                sequences[i, k] = pad_token_id
+        else:
+            sequences[i, j] = eos_token_id
             
     sequences.requires_grad = False
     
