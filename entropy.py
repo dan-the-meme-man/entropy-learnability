@@ -206,19 +206,20 @@ def sample_unigram_seqs_to_convergence(
     n = unigram_table.shape[0]
     
     # initialize p(symbol)
-    p = torch.full((n,), 1 / n, device=device, dtype=torch.float32)
+    p = torch.ones(n, device=device, dtype=torch.float32) / n
 
     # iterate plenty of times
     for i in range(1000 * n):
         counts_sum = counts.sum().clamp(min=1e-8)  # Avoid division by zero
         p_next = counts / counts_sum # current estimates of p(symbol)
 
-        if i % 50 == 0:  # Compute norm less frequently for speedup
+        if i % 200 == 0:  # Compute norm less frequently for speedup
             
             # difference between current next estimate and current estimate
             norm = torch.norm(p_next - p)
             print(f"Iteration {i}, Norm: {norm.item():.6f}")
-            if norm < 2e-5: # TODO: set more reasonable threshold - maybe 2e-5
+            print(p)
+            if norm < 1e-6: # TODO: set more reasonable threshold - maybe 2e-5
                 break
         p = p_next
 
@@ -238,16 +239,17 @@ def sample_unigram_seqs_to_convergence(
         # get counts of unique symbols
         uc, uc_counts = seqs.unique(return_counts=True)
         
-        # ignore bos token, eos token, and pad token
-        mask = (uc != bos_token_id)
+        # ignore pad token
+        mask = (uc != pad_token_id)
         mask &= (uc != eos_token_id)
-        mask &= (uc != pad_token_id)
+        mask &= (uc != bos_token_id)
         uc = uc[mask]
         uc_counts = uc_counts[mask]
 
         # GPU-optimized scatter_add_
         # add to running counts
-        counts.scatter_add_(0, uc, uc_counts.to(counts.dtype))
+        # generated indices are in range(3, n + 3)
+        counts.scatter_add_(0, uc - 3, uc_counts.to(counts.dtype))
 
     return p
 
@@ -281,19 +283,19 @@ def sample_bigram_seqs_to_convergence(
     n = bigram_table.shape[0]
     
     # initialize p(symbol)
-    p = torch.full((n,), 1 / n, device=device, dtype=torch.float32)
+    p = torch.ones(n, device=device, dtype=torch.float32) / n
 
     # iterate plenty of times
     for i in range(1000 * n):
         counts_sum = counts.sum().clamp(min=1e-8)  # Avoid division by zero
         p_next = counts / counts_sum # current estimates of p(symbol)
 
-        if i % 50 == 0:  # Compute norm less frequently for speedup
+        if i % 200 == 0:  # Compute norm less frequently for speedup
             
             # difference between current next estimate and current estimate
             norm = torch.norm(p_next - p)
             print(f"Iteration {i}, Norm: {norm.item():.6f}")
-            if norm < 2e-5: # TODO: set more reasonable threshold - maybe 2e-5
+            if norm < 1e-6: # TODO: set more reasonable threshold - maybe 2e-5
                 break
         p = p_next
 
@@ -313,16 +315,17 @@ def sample_bigram_seqs_to_convergence(
         # get counts of unique symbols
         uc, uc_counts = seqs.unique(return_counts=True)
         
-        # ignore counts of bos token, eos token, and pad token
-        mask = (uc != bos_token_id)
+        # ignore control symbols
+        mask = (uc != pad_token_id)
+        mask &= (uc != bos_token_id)
         mask &= (uc != eos_token_id)
-        mask &= (uc != pad_token_id)
         uc = uc[mask]
         uc_counts = uc_counts[mask]
 
         # GPU-optimized scatter_add_
         # add to running counts
-        counts.scatter_add_(0, uc, uc_counts.to(counts.dtype))
+        # generated indices are in range(3, n + 3)
+        counts.scatter_add_(0, uc - 3, uc_counts.to(counts.dtype))
 
     return p
         

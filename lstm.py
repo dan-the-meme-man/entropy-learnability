@@ -38,7 +38,7 @@ class LSTMLMHeadModel(nn.Module):
         
         super(LSTMLMHeadModel, self).__init__()
         
-        self.vocab_size = kwargs['vocab_size']
+        self.vocab_size = kwargs['vocab_size'] + 3
         self.n_positions = kwargs['n_positions']
         self.n_embd = kwargs['n_embd']
         self.n_layer = kwargs['n_layer']

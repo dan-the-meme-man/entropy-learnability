@@ -28,7 +28,8 @@ def generate_unigram_sequences_using_table(
     
     for i in range(batch_size):
         for j in range(sequence_length):
-            sampled_id = torch.multinomial(unigram_probs, 1)
+            # special tokens are 0, 1, and 2, so avoid them
+            sampled_id = torch.multinomial(unigram_probs, 1) + 3
             if sampled_id in stop_states:
                 sequences[i, j] = sampled_id
                 break
@@ -74,7 +75,8 @@ def generate_bigram_sequences_using_table(
     
     for i in range(batch_size):
         for j in range(sequence_length):
-            sampled_id = torch.multinomial(bigram_probs[sequences[i, j - 1]], 1)
+            # special tokens are 0, 1, and 2, so avoid them
+            sampled_id = torch.multinomial(bigram_probs[sequences[i, j - 1] - 3], 1) + 3
             if sampled_id in stop_states:
                 sequences[i, j] = sampled_id
                 break
@@ -87,5 +89,7 @@ def generate_bigram_sequences_using_table(
             sequences[i, j] = eos_token_id
             
     sequences.requires_grad = False
+    
+    # print(sequences)
     
     return sequences

@@ -29,7 +29,7 @@ def get_model(**kwargs) -> GPT2LMHeadModel:
     """
     
     config = GPT2Config(
-        vocab_size=kwargs['vocab_size'],
+        vocab_size=kwargs['vocab_size'] + 3,
         n_positions=kwargs['n_positions'],
         n_embd=kwargs['n_embd'],
         n_layer=kwargs['n_layer'],

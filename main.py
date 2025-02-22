@@ -118,14 +118,16 @@ def main() -> None:
     if 'unigrams' in hparams['dist']:
         entropy_calc = calculate_entropy_unigram
         transient_entropy_calc = calculate_transient_entropy_unigram
+        generate_func = generate_unigram_sequences_using_table
     elif 'bigrams' in hparams['dist']:
         entropy_calc = calculate_entropy_bigram
         transient_entropy_calc = calculate_transient_entropy_bigram
+        generate_func = generate_bigram_sequences_using_table
     else:
         raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
     
     def get_sequences() -> Tensor:
-        return generate_unigram_sequences_using_table(
+        return generate_func(
             hparams['batch_size'],
             hparams['sequence_length'],
             probs,
@@ -149,6 +151,18 @@ def main() -> None:
     if os.path.exists(os.path.join('results', save_name + '.json')):
         print(f'results/{save_name} already exists. Skipping training.')
         return
+    
+    entropy = entropy_calc(probs)
+    print('Theoretical entropy:', entropy)
+    transient_entropy = transient_entropy_calc(
+        probs,
+        hparams['sequence_length'],
+        hparams['batch_size'],
+        hparams['bos_token_id'],
+        hparams['eos_token_id'],
+        hparams['pad_token_id']
+    )
+    print('Transient entropy:', transient_entropy)
 
     print('Loading training data...')
     l_train = []
@@ -180,16 +194,6 @@ def main() -> None:
         model = get_model(**hparams)
     print('param count:', sum(p.numel() for p in model.parameters() if p.requires_grad))
     optimizer = get_optimizer(model, hparams)
-
-    entropy = entropy_calc(probs)
-    transient_entropy = transient_entropy_calc(
-        probs,
-        hparams['sequence_length'],
-        hparams['batch_size'],
-        hparams['bos_token_id'],
-        hparams['eos_token_id'],
-        hparams['pad_token_id']
-    )
     
     train_and_test(
         model=model,

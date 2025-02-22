@@ -43,6 +43,9 @@ def get_entropy(name, table):
 name_to_entropy = {}
 
 for result in results:
+    
+    # breakpoint()
+    
     try:
         with open(f'results/{result}') as f:
             table = json.load(f)['table']
