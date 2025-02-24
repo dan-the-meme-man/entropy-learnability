@@ -45,7 +45,11 @@ class LSTMLMHeadModel(nn.Module):
         self.embd_pdrop = kwargs['embd_pdrop']
         self.lstm_pdrop = kwargs['attn_pdrop']
         
-        self.embeddings = nn.Embedding(self.vocab_size, self.n_embd, padding_idx=kwargs['pad_token_id'])
+        self.embeddings = nn.Embedding(
+            self.vocab_size,
+            self.n_embd,
+            padding_idx=kwargs['pad_token_id']
+        )
         self.embeddings_dropout = nn.Dropout(self.embd_pdrop)
         self.lstm = nn.LSTM(
             self.n_embd,
