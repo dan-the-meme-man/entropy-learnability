@@ -125,6 +125,12 @@ def train_and_test(
                 input_ids = inputs.squeeze(0).to(device)
                 attention_mask = torch.ones_like(input_ids).to(device)
                 attention_mask[input_ids == pad_token_id] = 0
+                
+            if isinstance(model, GPT2LMHeadModel):
+                # GPT2 expects -100 for padding tokens
+                input_ids[input_ids == pad_token_id] = -100
+                
+            # LSTM expects custom pad_token_id, so no need to change it
             
             inputs = {
                 'input_ids': input_ids.to(device),
