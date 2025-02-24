@@ -19,6 +19,7 @@ def perplexity(
     model: GPT2LMHeadModel,
     test_loader: DataLoader,
     device: str,
+    pad_token_id: int,
     text_data: bool = False
 ) -> float:
     
@@ -47,6 +48,7 @@ def perplexity(
             else:
                 input_ids = inputs.squeeze(0)
                 attention_mask = torch.ones_like(input_ids)
+                attention_mask[input_ids == pad_token_id] = 0
             
             inputs = {
                 'input_ids': input_ids.to(device),
@@ -75,6 +77,7 @@ def train_and_test(
     entropy: float,
     transient_entropy: float,
     table: torch.Tensor,
+    pad_token_id: int,
     text_data: bool = False
 ) -> None:
     
@@ -121,6 +124,7 @@ def train_and_test(
             else:
                 input_ids = inputs.squeeze(0).to(device)
                 attention_mask = torch.ones_like(input_ids).to(device)
+                attention_mask[input_ids == pad_token_id] = 0
             
             inputs = {
                 'input_ids': input_ids.to(device),
@@ -148,7 +152,7 @@ def train_and_test(
                 msg += f'Avg Time: {avg_time:.3f}'
                 print(msg, flush=True)
                 
-        perplexities.append(perplexity(model, test_loader, device, text_data))
+        perplexities.append(perplexity(model, test_loader, device, text_data, pad_token_id))
 
     os.makedirs('models', exist_ok=True)
     os.makedirs('results', exist_ok=True)

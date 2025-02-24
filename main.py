@@ -207,7 +207,8 @@ def main() -> None:
         device=hparams['device'],
         entropy=entropy,
         transient_entropy=transient_entropy,
-        table=probs
+        table=probs,
+        pad_token_id=hparams['pad_token_id']
     )
     
 if __name__ == '__main__':

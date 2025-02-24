@@ -75,26 +75,44 @@ class LSTMLMHeadModel(nn.Module):
             Args:
                 input_ids: `torch.Tensor` - the input tensor.
                 attention_mask: `torch.Tensor` - the attention mask tensor.
+                labels: `torch.Tensor` - the label tensor.
                 
             Returns:
                 `torch.Tensor` - the output tensor.
         """
         
+        # Compute sequence lengths from attention_mask
+        if attention_mask is not None:
+            lengths = attention_mask.sum(dim=1).cpu()
+        else:
+            lengths = (input_ids != self.embeddings.padding_idx).sum(dim=1).cpu()
+
         # Embed the input tensor.
         x = self.embeddings(input_ids)
         x = self.embeddings_dropout(x)
-        
-        # Pass the embeddings through the LSTM.
-        x, h = self.lstm(x)
-        
+
+        # Pack the padded sequence to ignore padding in LSTM
+        x = nn.utils.rnn.pack_padded_sequence(
+            x,
+            lengths,
+            batch_first=True,
+            enforce_sorted=False
+        )
+
+        # Pass through LSTM
+        x, (h_n, c_n) = self.lstm(x)
+
+        # Unpack sequence
+        x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)
+
         # Get the logits.
         x = self.output(x)
-        
+
         outputs = {
             'logits': x,
-            'hidden_states': h
+            'hidden_states': (h_n, c_n)
         }
-        
+
         if labels is not None:
             labels = labels.to(x.device)
             shift_logits = x[..., :-1, :].contiguous()
@@ -104,5 +122,5 @@ class LSTMLMHeadModel(nn.Module):
                 shift_labels.view(-1)
             )
             outputs['loss'] = loss
-        
+
         return ReturnObject(**outputs)
