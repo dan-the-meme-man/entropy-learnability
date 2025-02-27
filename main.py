@@ -56,9 +56,12 @@ def main() -> None:
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     random.seed(args.seed)
+    
+    debug = False
+    print('debug:', debug)
 
     hparams = {
-        'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+        'device': 'cpu' if debug else 'cuda',
         'vocab_size': int(args.vocab_size),
         'n_positions': 64,
         'n_embd': 64, # 64, 256
@@ -73,15 +76,15 @@ def main() -> None:
         'pad_token_id': 2,
         'batch_size': 4,
         'sequence_length': 64,
-        'epochs': 4,
+        'epochs': 10 if not debug else 1,
         'learning_rate': 0.001,
         'warmup_steps': 100,
         'weight_decay': 0.01,
         'adam_epsilon': 1e-8,
         'max_grad_norm': 1.0,
         'dist': args.distribution,
-        'num_train_samples': 8000,
-        'num_test_samples': 2000,
+        'num_train_samples': 8000 if not debug else 100,
+        'num_test_samples': 2000 if not debug else 100,
         'log_interval': 10,
         'manual_option': args.manual_option
     }
@@ -152,17 +155,18 @@ def main() -> None:
         print(f'results/{save_name} already exists. Skipping training.')
         return
     
-    entropy = entropy_calc(probs)
-    print('Theoretical entropy:', entropy)
-    transient_entropy = transient_entropy_calc(
-        probs,
-        hparams['sequence_length'],
-        hparams['batch_size'],
-        hparams['bos_token_id'],
-        hparams['eos_token_id'],
-        hparams['pad_token_id']
-    )
-    print('Transient entropy:', transient_entropy)
+    if not debug:
+        entropy = entropy_calc(probs)
+        print('Theoretical entropy:', entropy)
+        transient_entropy = transient_entropy_calc(
+            probs,
+            hparams['sequence_length'],
+            hparams['batch_size'],
+            hparams['bos_token_id'],
+            hparams['eos_token_id'],
+            hparams['pad_token_id']
+        )
+        print('Transient entropy:', transient_entropy)
 
     print('Loading training data...')
     l_train = []
@@ -192,6 +196,7 @@ def main() -> None:
         model = get_lstm(**hparams)
     else:
         model = get_model(**hparams)
+        
     print('param count:', sum(p.numel() for p in model.parameters() if p.requires_grad))
     optimizer = get_optimizer(model, hparams)
     
@@ -205,8 +210,8 @@ def main() -> None:
         save_name=save_name,
         scheduler=get_scheduler(optimizer, hparams['warmup_steps']),
         device=hparams['device'],
-        entropy=entropy,
-        transient_entropy=transient_entropy,
+        entropy=entropy if not debug else None,
+        transient_entropy=transient_entropy if not debug else None,
         table=probs,
         pad_token_id=hparams['pad_token_id']
     )

@@ -44,11 +44,13 @@ class LSTMLMHeadModel(nn.Module):
         self.n_layer = kwargs['n_layer']
         self.embd_pdrop = kwargs['embd_pdrop']
         self.lstm_pdrop = kwargs['attn_pdrop']
+        self.pad_token_id = kwargs['pad_token_id']
+        self.max_length = kwargs['sequence_length']
         
         self.embeddings = nn.Embedding(
             self.vocab_size,
             self.n_embd,
-            padding_idx=kwargs['pad_token_id']
+            padding_idx=self.pad_token_id
         )
         self.embeddings_dropout = nn.Dropout(self.embd_pdrop)
         self.lstm = nn.LSTM(
@@ -85,7 +87,7 @@ class LSTMLMHeadModel(nn.Module):
         if attention_mask is not None:
             lengths = attention_mask.sum(dim=1).cpu()
         else:
-            lengths = (input_ids != self.embeddings.padding_idx).sum(dim=1).cpu()
+            lengths = (input_ids != self.pad_token_id).sum(dim=1).cpu()
 
         # Embed the input tensor.
         x = self.embeddings(input_ids)
@@ -103,7 +105,12 @@ class LSTMLMHeadModel(nn.Module):
         x, (h_n, c_n) = self.lstm(x)
 
         # Unpack sequence
-        x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)
+        x, _ = nn.utils.rnn.pad_packed_sequence(
+            x,
+            batch_first=True,
+            padding_value=self.pad_token_id,
+            total_length=self.max_length
+        )
 
         # Get the logits.
         x = self.output(x)

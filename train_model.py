@@ -39,6 +39,8 @@ def perplexity(
     
     total_loss = 0
     
+    loss_fn = torch.nn.CrossEntropyLoss(ignore_index=pad_token_id)
+    
     with torch.no_grad():
         for inputs in test_loader:
             
@@ -55,8 +57,16 @@ def perplexity(
                 'attention_mask': attention_mask.to(device)
             }
             
-            outputs = model(**inputs, labels=inputs['input_ids'])
-            loss = outputs.loss
+            outputs = model(**inputs, labels=None)#labels=inputs['input_ids'])
+            
+            labels = inputs['input_ids']
+            x = outputs.logits
+            shift_logits = x[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            loss = loss_fn(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1)
+            )
             
             total_loss += loss.item()
             
@@ -95,6 +105,7 @@ def train_and_test(
             scheduler: `_LRScheduler` - Learning rate scheduler.
             device: `str` - Device to train on.
     """
+    
     if os.path.exists(os.path.join('results', save_name + '.json')):
         print(f'results/{save_name} already exists. Skipping training.')
         return
@@ -103,6 +114,8 @@ def train_and_test(
     
     train_losses = []
     perplexities = []
+    
+    loss_fn = torch.nn.CrossEntropyLoss(ignore_index=pad_token_id)
     
     for epoch in range(epochs):
         print(f'Epoch {epoch + 1}')
@@ -125,20 +138,23 @@ def train_and_test(
                 input_ids = inputs.squeeze(0).to(device)
                 attention_mask = torch.ones_like(input_ids).to(device)
                 attention_mask[input_ids == pad_token_id] = 0
-                
-            if isinstance(model, GPT2LMHeadModel):
-                # GPT2 expects -100 for padding tokens
-                input_ids[input_ids == pad_token_id] = -100
-                
-            # LSTM expects custom pad_token_id, so no need to change it
             
             inputs = {
                 'input_ids': input_ids.to(device),
                 'attention_mask': attention_mask.to(device)
             }
             
-            outputs = model(**inputs, labels=inputs['input_ids'])
-            loss = outputs.loss
+            outputs = model(**inputs, labels=None)#labels=inputs['input_ids'])
+            
+            labels = inputs['input_ids']
+            x = outputs.logits
+            shift_logits = x[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            
+            loss = loss_fn(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1)
+            )
             
             loss.backward()
             optimizer.step()
@@ -158,7 +174,13 @@ def train_and_test(
                 msg += f'Avg Time: {avg_time:.3f}'
                 print(msg, flush=True)
                 
-        perplexities.append(perplexity(model, test_loader, device, text_data, pad_token_id))
+        perplexities.append(perplexity(
+            model,
+            test_loader,
+            device,
+            pad_token_id,
+            text_data
+        ))
 
     os.makedirs('models', exist_ok=True)
     os.makedirs('results', exist_ok=True)

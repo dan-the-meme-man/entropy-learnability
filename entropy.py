@@ -1,7 +1,12 @@
 import torch
 device = 'cpu'#torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from generate_sequences import generate_bigram_sequences_using_table, generate_unigram_sequences_using_table
+from generate_sequences import (
+    generate_bigram_sequences_using_table,
+    generate_unigram_sequences_using_table
+)
+
+TOL = 5e-6
 
 def calculate_entropy_unigram(unigram_table: torch.Tensor) -> float:
     """
@@ -219,7 +224,7 @@ def sample_unigram_seqs_to_convergence(
             norm = torch.norm(p_next - p)
             print(f"Iteration {i}, Norm: {norm.item():.6f}")
             print(p)
-            if norm < 1e-6: # TODO: set more reasonable threshold - maybe 2e-5
+            if norm < TOL: # TODO: set more reasonable threshold - maybe 2e-5
                 break
         p = p_next
 
@@ -295,7 +300,7 @@ def sample_bigram_seqs_to_convergence(
             # difference between current next estimate and current estimate
             norm = torch.norm(p_next - p)
             print(f"Iteration {i}, Norm: {norm.item():.6f}")
-            if norm < 1e-6: # TODO: set more reasonable threshold - maybe 2e-5
+            if norm < TOL: # TODO: set more reasonable threshold - maybe 2e-5
                 break
         p = p_next
 
