@@ -62,7 +62,7 @@ def generate_bigram_sequences_using_table(
         
         Args:
             batch_size: `int` - number of sequences to generate
-            sequence_length: `sequence_length` - length of each sequence
+            sequence_length: `int` - length of each sequence
             bigram_probs: `torch.Tensor` - probabilities of each integer in the vocabulary
             
         Returns:
