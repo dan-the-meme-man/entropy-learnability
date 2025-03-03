@@ -37,7 +37,8 @@ def main() -> None:
         'normal_bigrams',
         'uneven_bigrams',
         'manual_unigrams',
-        'manual_bigrams'
+        'manual_bigrams',
+        'long_range_bigrams'
     ]
 
     argparser = argparse.ArgumentParser()
@@ -112,9 +113,11 @@ def main() -> None:
     elif hparams['dist'] == 'manual_unigrams':
         probs = manual_unigram_table(hparams['manual_option'])
         hparams['vocab_size'] = len(probs)  
-    elif hparams['dist'] == 'manual_bigrams':
-        probs = manual_bigram_table(hparams['manual_option'])
-        hparams['vocab_size'] = len(probs)
+    elif hparams['dist'] == 'long_range_bigrams':
+        probs = long_range_bigram_table(
+            hparams['vocab_size'],
+            softmax=args.softmax
+        )
     else:
         raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
     
