@@ -3,7 +3,7 @@ venv/
 *~
 models/
 *.o
-*.pdf
+*guidelines*.pdf
 pmfs/
 results/
 loss_plots/
