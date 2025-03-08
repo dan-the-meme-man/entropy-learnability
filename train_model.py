@@ -88,7 +88,8 @@ def train_and_test(
     transient_entropy: float,
     table: torch.Tensor,
     pad_token_id: int,
-    text_data: bool = False
+    text_data: bool = False,
+    debug: bool = False
 ) -> None:
     
     """
@@ -105,10 +106,6 @@ def train_and_test(
             scheduler: `_LRScheduler` - Learning rate scheduler.
             device: `str` - Device to train on.
     """
-    
-    if os.path.exists(os.path.join('results', save_name + '.json')):
-        print(f'results/{save_name} already exists. Skipping training.')
-        return
     
     model.to(device)
     
@@ -182,18 +179,19 @@ def train_and_test(
             text_data
         ))
 
-    os.makedirs('models', exist_ok=True)
-    os.makedirs('results', exist_ok=True)
-    with open(os.path.join('results', save_name + '.json'), 'w+', encoding='utf-8') as f:
-        
-        # transient entropy is a float, but could be nan
-        if transient_entropy != transient_entropy:
-            transient_entropy = 'nan'
-        
-        json.dump({
-            'test_set_perplexities': perplexities,
-            'entropy': entropy,
-            'transient_entropy': transient_entropy,
-            'table': table.tolist() if table is not None else None,
-            'train_losses': train_losses
-        }, f, indent=4)
+    if not debug:
+        os.makedirs('models', exist_ok=True)
+        os.makedirs('results', exist_ok=True)
+        with open(os.path.join('results', save_name + '.json'), 'w+', encoding='utf-8') as f:
+            
+            # transient entropy is a float, but could be nan
+            if transient_entropy != transient_entropy:
+                transient_entropy = 'nan'
+            
+            json.dump({
+                'test_set_perplexities': perplexities,
+                'entropy': entropy,
+                'transient_entropy': transient_entropy,
+                'table': table.tolist() if table is not None else None,
+                'train_losses': train_losses
+            }, f, indent=4)

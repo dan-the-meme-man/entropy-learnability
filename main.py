@@ -87,7 +87,8 @@ def main() -> None:
         'num_train_samples': 8000 if not debug else 100,
         'num_test_samples': 2000 if not debug else 100,
         'log_interval': 10,
-        'manual_option': args.manual_option
+        'manual_option': args.manual_option,
+        'stop_states': (None,) # (3,) for variable length sequences
     }
     
     if hparams['dist'] == 'uniform_unigrams':
@@ -139,7 +140,8 @@ def main() -> None:
             probs,
             hparams['bos_token_id'],
             hparams['eos_token_id'],
-            hparams['pad_token_id']
+            hparams['pad_token_id'],
+            hparams['stop_states']
         )
     
     save_name = f'{hparams["dist"]}_{hparams["vocab_size"]}'
@@ -154,7 +156,7 @@ def main() -> None:
     print('training:', save_name)
     print('training on:', hparams['device'])
     
-    if os.path.exists(os.path.join('results', save_name + '.json')):
+    if not debug and os.path.exists(os.path.join('results', save_name + '.json')):
         print(f'results/{save_name} already exists. Skipping training.')
         return
     
@@ -216,7 +218,8 @@ def main() -> None:
         entropy=entropy if not debug else None,
         transient_entropy=transient_entropy if not debug else None,
         table=probs,
-        pad_token_id=hparams['pad_token_id']
+        pad_token_id=hparams['pad_token_id'],
+        debug=debug
     )
     
 if __name__ == '__main__':

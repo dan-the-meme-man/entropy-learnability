@@ -74,7 +74,7 @@ def generate_bigram_sequences_using_table(
     sequences[:, 0] = bos_token_id
     
     for i in range(batch_size):
-        for j in range(sequence_length):
+        for j in range(1, sequence_length):
             # special tokens are 0, 1, and 2, so avoid them
             sampled_id = torch.multinomial(bigram_probs[sequences[i, j - 1] - 3], 1) + 3
             if sampled_id in stop_states:
