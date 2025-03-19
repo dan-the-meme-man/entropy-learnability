@@ -65,6 +65,7 @@ def get_dist(
     optimizer = torch.optim.AdamW([dist], lr=0.01)
     
     i = 0
+    print('-----------------------------------------------------')
     while True:
         
         optimizer.zero_grad()
@@ -94,10 +95,13 @@ def get_dist(
     E_X_sq = (final_dist * X * X).sum()
     mean = E_X.item()
     var = E_X_sq.item() - (mean ** 2)
-    print(f'desired entropy: {desired_entropy}')
-    print(f'true entropy: {mean}')
+    print('-----------------------------------------------------')
+    print(f'desired entropy:    {desired_entropy}')
+    print(f'true entropy:       {mean}')
+    print('-----------------------------------------------------')
     print(f'desired varentropy: {desired_varent}')
-    print(f'true varentropy: {var}')
+    print(f'true varentropy:    {var}')
+    print('-----------------------------------------------------')
     return final_dist
 
 """
