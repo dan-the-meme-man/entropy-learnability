@@ -7,6 +7,7 @@ import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
+from torch.nn.functional import kl_div, log_softmax
 from transformers import GPT2LMHeadModel
 
 def free_memory() -> None:
@@ -20,6 +21,9 @@ def perplexity(
     test_loader: DataLoader,
     device: str,
     pad_token_id: int,
+    table: torch.Tensor,
+    bos_token_id: int,
+    eos_token_id: int,
     text_data: bool = False
 ) -> float:
     
@@ -34,6 +38,12 @@ def perplexity(
         Returns:
             `float` - the perplexity of the model.
     """
+    
+    kl_divs = []
+    
+    pred_counts = torch.zeros_like(table)
+    
+    uni_or_bi = 'uni' if table.dim() == 1 else 'bi'
     
     model.eval()
     
@@ -70,7 +80,37 @@ def perplexity(
             
             total_loss += loss.item()
             
-    return torch.exp(torch.tensor(total_loss / len(test_loader))).item()
+            preds = shift_logits.argmax(dim=-1)
+            
+            if uni_or_bi == 'uni':
+                uc, uc_counts = preds.unique(return_counts=True)
+                mask = (uc != pad_token_id)
+                mask &= (uc != eos_token_id)
+                mask &= (uc != bos_token_id)
+                uc = uc[mask]
+                uc_counts = uc_counts[mask]
+                pred_counts.scatter_add_(0, uc - 3, uc_counts.to(pred_counts.dtype))
+                
+                # breakpoint()
+                
+                # # KL with true distribution
+                # # [:, :, 3:] to ignore special tokens
+                # logits_skip_special = shift_logits[:, :, 3:]
+                # div = kl_div(
+                #     log_softmax(logits_skip_special, dim=-1),
+                #     table[None, None, :].expand_as(logits_skip_special),
+                #     log_target=True,
+                #     reduction='none'
+                # )
+                # kl_divs.append(div.tolist())
+            else:
+                # count bigrams in each sequence
+                # remember to subtract 3 from the indices
+                for i in range(preds.size(0)):
+                    for j in range(preds.size(1) - 1):
+                        pred_counts[preds[i, j] - 3, preds[i, j+1] - 3] += 1
+            
+    return torch.exp(torch.tensor(total_loss / len(test_loader))).item(), pred_counts
 
 
 
@@ -85,9 +125,12 @@ def train_and_test(
     scheduler: _LRScheduler,
     device: str,
     entropy: float,
+    entropy_variance: float,
     transient_entropy: float,
     table: torch.Tensor,
     pad_token_id: int,
+    bos_token_id: int,
+    eos_token_id: int,
     text_data: bool = False,
     debug: bool = False
 ) -> None:
@@ -111,6 +154,7 @@ def train_and_test(
     
     train_losses = []
     perplexities = []
+    pred_dists = []
     
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=pad_token_id)
     
@@ -170,18 +214,25 @@ def train_and_test(
                 msg += f'Avg Loss: {avg_loss:.3f}, '
                 msg += f'Avg Time: {avg_time:.3f}'
                 print(msg, flush=True)
-                
-        perplexities.append(perplexity(
+        
+        ppl, preds = perplexity(
             model,
             test_loader,
             device,
             pad_token_id,
+            table,
+            bos_token_id,
+            eos_token_id,
             text_data
-        ))
+        )
+        perplexities.append(ppl)
+        pred_dists.append(preds)
 
     if not debug:
-        os.makedirs('models', exist_ok=True)
         os.makedirs('results', exist_ok=True)
+        os.makedirs('preds', exist_ok=True)
+        os.makedirs('models', exist_ok=True)
+        os.makedirs('tables', exist_ok=True)
         with open(os.path.join('results', save_name + '.json'), 'w+', encoding='utf-8') as f:
             
             # transient entropy is a float, but could be nan
@@ -191,7 +242,12 @@ def train_and_test(
             json.dump({
                 'test_set_perplexities': perplexities,
                 'entropy': entropy,
+                'entropy_variance': entropy_variance,
                 'transient_entropy': transient_entropy,
-                'table': table.tolist() if table is not None else None,
                 'train_losses': train_losses
             }, f, indent=4)
+        
+        torch.save(torch.tensor(pred_dists), os.path.join('preds', save_name + '.pt'))
+        model.save_pretrained(os.path.join('models', save_name + '.pt'))
+        torch.save(table, os.path.join('tables', save_name + '.pt'))
+        print('Model saved.')

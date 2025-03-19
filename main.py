@@ -58,20 +58,21 @@ def main() -> None:
     np.random.seed(args.seed)
     random.seed(args.seed)
     
-    debug = False
+    debug = True
     print('debug:', debug)
 
+    do = 0.0 # 0.05
     hparams = {
         'device': 'cpu' if debug else 'cuda',
         'vocab_size': int(args.vocab_size),
         'n_positions': 64,
-        'n_embd': 64, # 64, 256
+        'n_embd': 64, # 256
         'n_layer': 4,
         'n_head': 4,
-        'resid_pdrop': 0.05,
-        'embd_pdrop': 0.05,
-        'attn_pdrop': 0.05,
-        'summary_first_dropout': 0.05,
+        'resid_pdrop': do,
+        'embd_pdrop': do,
+        'attn_pdrop': do,
+        'summary_first_dropout': do,
         'bos_token_id': 0,
         'eos_token_id': 1,
         'pad_token_id': 2,
@@ -153,6 +154,8 @@ def main() -> None:
     if hparams['n_embd'] != 64:
         save_name += f'_embd_{hparams["n_embd"]}'
         
+    save_name += f'_do_{hparams["attn_pdrop"]}'
+        
     print('training:', save_name)
     print('training on:', hparams['device'])
     
@@ -161,8 +164,9 @@ def main() -> None:
         return
     
     if not debug:
-        entropy = entropy_calc(probs)
+        entropy, entropy_variance = entropy_calc(probs)
         print('Theoretical entropy:', entropy)
+        print('Theoretical entropy variance:', entropy_variance)
         transient_entropy = transient_entropy_calc(
             probs,
             hparams['sequence_length'],
@@ -216,9 +220,12 @@ def main() -> None:
         scheduler=get_scheduler(optimizer, hparams['warmup_steps']),
         device=hparams['device'],
         entropy=entropy if not debug else None,
+        entropy_variance=entropy_variance if not debug else None,
         transient_entropy=transient_entropy if not debug else None,
         table=probs,
         pad_token_id=hparams['pad_token_id'],
+        bos_token_id=hparams['bos_token_id'],
+        eos_token_id=hparams['eos_token_id'],
         debug=debug
     )
     

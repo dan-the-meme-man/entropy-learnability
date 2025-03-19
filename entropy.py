@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 device = 'cpu'#torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -8,7 +10,7 @@ from generate_sequences import (
 
 TOL = 5e-6
 
-def calculate_entropy_unigram(unigram_table: torch.Tensor) -> float:
+def calculate_entropy_unigram(unigram_table: torch.Tensor) -> Tuple[float, float]:
     """
     Calculate entropy of a unigram table.
     
@@ -23,13 +25,20 @@ def calculate_entropy_unigram(unigram_table: torch.Tensor) -> float:
     
     unigram_table = unigram_table.to(device)
     
-    t = -1 * (unigram_table * unigram_table.log()).sum()
+    X = -unigram_table.log()
     
-    return t.item()
+    E_X = (unigram_table * X).sum()
+    
+    E_X_sq = (unigram_table * X * X).sum()
+    
+    mean = E_X.item()
+    var = E_X_sq.item() - mean ** 2
+    
+    return mean, var
 
 
 
-def calculate_entropy_bigram(bigram_table: torch.Tensor) -> float:
+def calculate_entropy_bigram(bigram_table: torch.Tensor) -> Tuple[float, float]:
     """
     Calculate entropy of a bigram table.
     
@@ -52,13 +61,16 @@ def calculate_entropy_bigram(bigram_table: torch.Tensor) -> float:
     joint_probs = p[:, None] * bigram_table
     
     # -sum(p * log p)
+    X = -joint_probs.log()
     try:
-        t = -1 * (joint_probs * joint_probs.log()).sum()
+        mean = (joint_probs * X).sum().item()
+        var = (joint_probs * X * X).sum().item() - mean ** 2
     except:
-        t = -1 * (joint_probs * (joint_probs + 1e-10).log()).sum()
+        mean = (joint_probs * (X + 1e-10)).sum().item()
+        var = (joint_probs * (X + 1e-10) * (X + 1e-10)).sum().item() - mean ** 2
     
     # return scalar
-    return t.item()
+    return mean, var
 
 
 # TODO: Find stackoverflow post about this
