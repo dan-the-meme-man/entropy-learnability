@@ -16,7 +16,9 @@ from entropy import (
     calculate_entropy_unigram,
     calculate_entropy_bigram,
     calculate_transient_entropy_bigram,
-    calculate_transient_entropy_unigram
+    calculate_transient_entropy_unigram,
+    unigram_sample_entropy_and_var,
+    bigram_sample_entropy_and_var
 )
 
 def main() -> None:
@@ -48,6 +50,7 @@ def main() -> None:
     argparser.add_argument('--seed', type=int, default=42)
     argparser.add_argument('--lstm', '-l', action='store_true')
     argparser.add_argument('--manual_option', '-m', type=float, default=0.0)
+    argparser.add_argument('--do', type=float, default=0.05)
     args = argparser.parse_args()
     if args.manual_option  == 0.0 and args.distribution in ['manual_unigrams', 'manual_bigrams']:
         raise ValueError('Please provide a manual option for the distribution.')
@@ -58,10 +61,10 @@ def main() -> None:
     np.random.seed(args.seed)
     random.seed(args.seed)
     
-    debug = True
+    debug = False
     print('debug:', debug)
 
-    do = 0.0 # 0.05
+    do = args.do
     hparams = {
         'device': 'cpu' if debug else 'cuda',
         'vocab_size': int(args.vocab_size),
@@ -89,7 +92,8 @@ def main() -> None:
         'num_test_samples': 2000 if not debug else 100,
         'log_interval': 10,
         'manual_option': args.manual_option,
-        'stop_states': (None,) # (3,) for variable length sequences
+        'stop_states': (None,), # (3,) for variable length sequences
+        'use_control_symbols': False
     }
     
     if hparams['dist'] == 'uniform_unigrams':
@@ -126,11 +130,19 @@ def main() -> None:
     if 'unigrams' in hparams['dist']:
         entropy_calc = calculate_entropy_unigram
         transient_entropy_calc = calculate_transient_entropy_unigram
-        generate_func = generate_unigram_sequences_using_table
+        sample_entropy_and_var = unigram_sample_entropy_and_var
+        if hparams['use_control_symbols']:
+            generate_func = generate_unigram_sequences_using_table
+        else:
+            generate_func = generate_unigram_sequences_using_table_no_control_symbols
     elif 'bigrams' in hparams['dist']:
         entropy_calc = calculate_entropy_bigram
         transient_entropy_calc = calculate_transient_entropy_bigram
-        generate_func = generate_bigram_sequences_using_table
+        sample_entropy_and_var = bigram_sample_entropy_and_var
+        if hparams['use_control_symbols']:
+            generate_func = generate_bigram_sequences_using_table
+        else:
+            generate_func = generate_bigram_sequences_using_table_no_control_symbols
     else:
         raise ValueError('Invalid distribution. Options are: ' + ', '.join(distributions))
     
@@ -173,7 +185,8 @@ def main() -> None:
             hparams['batch_size'],
             hparams['bos_token_id'],
             hparams['eos_token_id'],
-            hparams['pad_token_id']
+            hparams['pad_token_id'],
+            hparams['use_control_symbols']
         )
         print('Transient entropy:', transient_entropy)
 
@@ -189,12 +202,24 @@ def main() -> None:
         shuffle=True,
         num_workers=1,
     )
+    train_sample_entropy, train_sample_var = sample_entropy_and_var(
+        l_train,
+        hparams
+    )
+    print('Train sample entropy:', train_sample_entropy)
+    print('Train sample entropy variance:', train_sample_var)
     print('Loading test data...')
     l_test = []
     for _ in range(hparams['num_test_samples']):
         l_test.append(get_sequences())
         if len(l_test) % 100 == 0:
             print(f'{len(l_test)} / {hparams["num_test_samples"]}')
+    test_sample_entropy, test_sample_var = sample_entropy_and_var(
+        l_test,
+        hparams
+    )
+    print('Test sample entropy:', test_sample_entropy)
+    print('Test sample entropy variance:', test_sample_var)
     test_loader = DataLoader(
         l_test,
         batch_size=1,
@@ -222,10 +247,15 @@ def main() -> None:
         entropy=entropy if not debug else None,
         entropy_variance=entropy_variance if not debug else None,
         transient_entropy=transient_entropy if not debug else None,
+        train_sample_entropy=train_sample_entropy,
+        train_sample_var=train_sample_var,
+        test_sample_entropy=test_sample_entropy,
+        test_sample_var=test_sample_var,
         table=probs,
         pad_token_id=hparams['pad_token_id'],
         bos_token_id=hparams['bos_token_id'],
         eos_token_id=hparams['eos_token_id'],
+        use_control_symbols=hparams['use_control_symbols'],
         debug=debug
     )
     

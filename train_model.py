@@ -2,6 +2,7 @@ import os
 import gc
 import json
 from time import time
+from typing import Tuple
 
 import torch
 from torch.optim import Optimizer
@@ -24,8 +25,9 @@ def perplexity(
     table: torch.Tensor,
     bos_token_id: int,
     eos_token_id: int,
+    use_control_symbols: bool = False,
     text_data: bool = False
-) -> float:
+) -> Tuple[float, torch.Tensor]:
     
     """
         Calculate the perplexity of a GPT2 model.
@@ -39,9 +41,7 @@ def perplexity(
             `float` - the perplexity of the model.
     """
     
-    kl_divs = []
-    
-    pred_counts = torch.zeros_like(table)
+    pred_counts = torch.zeros_like(table).to(device)
     
     uni_or_bi = 'uni' if table.dim() == 1 else 'bi'
     
@@ -49,7 +49,10 @@ def perplexity(
     
     total_loss = 0
     
-    loss_fn = torch.nn.CrossEntropyLoss(ignore_index=pad_token_id)
+    if use_control_symbols:
+        loss_fn = torch.nn.CrossEntropyLoss(ignore_index=pad_token_id)
+    else:
+        loss_fn = torch.nn.CrossEntropyLoss()
     
     with torch.no_grad():
         for inputs in test_loader:
@@ -60,7 +63,8 @@ def perplexity(
             else:
                 input_ids = inputs.squeeze(0)
                 attention_mask = torch.ones_like(input_ids)
-                attention_mask[input_ids == pad_token_id] = 0
+                if use_control_symbols:
+                    attention_mask[input_ids == pad_token_id] = 0
             
             inputs = {
                 'input_ids': input_ids.to(device),
@@ -84,12 +88,15 @@ def perplexity(
             
             if uni_or_bi == 'uni':
                 uc, uc_counts = preds.unique(return_counts=True)
-                mask = (uc != pad_token_id)
-                mask &= (uc != eos_token_id)
-                mask &= (uc != bos_token_id)
-                uc = uc[mask]
-                uc_counts = uc_counts[mask]
-                pred_counts.scatter_add_(0, uc - 3, uc_counts.to(pred_counts.dtype))
+                if use_control_symbols:
+                    mask = (uc != pad_token_id)
+                    mask &= (uc != eos_token_id)
+                    mask &= (uc != bos_token_id)
+                    uc = uc[mask]
+                    uc_counts = uc_counts[mask]
+                    pred_counts.scatter_add_(0, uc - 3, uc_counts.to(pred_counts.dtype))
+                else:
+                    pred_counts.scatter_add_(0, uc, uc_counts.to(pred_counts.dtype))
                 
                 # breakpoint()
                 
@@ -108,7 +115,10 @@ def perplexity(
                 # remember to subtract 3 from the indices
                 for i in range(preds.size(0)):
                     for j in range(preds.size(1) - 1):
-                        pred_counts[preds[i, j] - 3, preds[i, j+1] - 3] += 1
+                        if use_control_symbols:
+                            pred_counts[preds[i, j] - 3, preds[i, j+1] - 3] += 1
+                        else:
+                            pred_counts[preds[i, j], preds[i, j+1]] += 1
             
     return torch.exp(torch.tensor(total_loss / len(test_loader))).item(), pred_counts
 
@@ -127,10 +137,15 @@ def train_and_test(
     entropy: float,
     entropy_variance: float,
     transient_entropy: float,
+    train_sample_entropy: float,
+    train_sample_var: float,
+    test_sample_entropy: float,
+    test_sample_var: float,
     table: torch.Tensor,
     pad_token_id: int,
     bos_token_id: int,
     eos_token_id: int,
+    use_control_symbols: bool = False,
     text_data: bool = False,
     debug: bool = False
 ) -> None:
@@ -156,7 +171,10 @@ def train_and_test(
     perplexities = []
     pred_dists = []
     
-    loss_fn = torch.nn.CrossEntropyLoss(ignore_index=pad_token_id)
+    if use_control_symbols:
+        loss_fn = torch.nn.CrossEntropyLoss(ignore_index=pad_token_id)
+    else:
+        loss_fn = torch.nn.CrossEntropyLoss()
     
     for epoch in range(epochs):
         print(f'Epoch {epoch + 1}')
@@ -178,7 +196,8 @@ def train_and_test(
             else:
                 input_ids = inputs.squeeze(0).to(device)
                 attention_mask = torch.ones_like(input_ids).to(device)
-                attention_mask[input_ids == pad_token_id] = 0
+                if use_control_symbols:
+                    attention_mask[input_ids == pad_token_id] = 0
             
             inputs = {
                 'input_ids': input_ids.to(device),
@@ -223,10 +242,19 @@ def train_and_test(
             table,
             bos_token_id,
             eos_token_id,
-            text_data
+            use_control_symbols=use_control_symbols,
+            text_data=text_data
         )
         perplexities.append(ppl)
         pred_dists.append(preds)
+        
+        try:
+            if ppl <= perplexities[-2]:
+                model.save_pretrained(os.path.join('models', save_name))
+                print(f'Saved model to models/{save_name}.')
+        except IndexError:
+            model.save_pretrained(os.path.join('models', save_name))
+            print(f'Saved model to models/{save_name}.')
 
     if not debug:
         os.makedirs('results', exist_ok=True)
@@ -244,10 +272,19 @@ def train_and_test(
                 'entropy': entropy,
                 'entropy_variance': entropy_variance,
                 'transient_entropy': transient_entropy,
+                'train_sample_entropy': train_sample_entropy,
+                'train_sample_var': train_sample_var,
+                'test_sample_entropy': test_sample_entropy,
+                'test_sample_var': test_sample_var,
                 'train_losses': train_losses
             }, f, indent=4)
+            
+            print(f'Results saved to results/{save_name}.json.')
         
-        torch.save(torch.tensor(pred_dists), os.path.join('preds', save_name + '.pt'))
-        model.save_pretrained(os.path.join('models', save_name + '.pt'))
-        torch.save(table, os.path.join('tables', save_name + '.pt'))
-        print('Model saved.')
+        pred_save_path = os.path.join('preds', save_name + '.pt')
+        torch.save(torch.stack(pred_dists), pred_save_path)
+        print(f'Predictions saved to {pred_save_path}.')
+        if len(table) < 1001:
+            table_save_path = os.path.join('tables', save_name + '.pt')
+            torch.save(table, table_save_path)
+            print(f'Table saved to {table_save_path}.')

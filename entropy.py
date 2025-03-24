@@ -5,10 +5,74 @@ device = 'cpu'#torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from generate_sequences import (
     generate_bigram_sequences_using_table,
-    generate_unigram_sequences_using_table
+    generate_bigram_sequences_using_table_no_control_symbols,
+    generate_unigram_sequences_using_table,
+    generate_unigram_sequences_using_table_no_control_symbols
 )
 
 TOL = 5e-6
+
+
+
+def unigram_sample_entropy_and_var(
+    seqs: list[torch.Tensor],
+    hparams: dict
+) -> Tuple[float, float]:
+    counts = torch.zeros(
+        hparams['vocab_size'],
+        device=device,
+        dtype=torch.float32
+    )
+    for seq in seqs:
+        
+        seq = seq.to(device)
+        
+        # get counts of unique symbols
+        uc, uc_counts = seq.unique(return_counts=True)
+        
+        # ignore control symbols
+        if hparams['use_control_symbols']:
+            mask = (uc != hparams['pad_token_id'])
+            mask &= (uc != hparams['bos_token_id'])
+            mask &= (uc != hparams['eos_token_id'])
+            uc = uc[mask]
+            uc_counts = uc_counts[mask]
+            counts.scatter_add_(0, uc - 3, uc_counts.to(counts.dtype))
+        else:
+            counts.scatter_add_(0, uc, uc_counts.to(counts.dtype))
+
+    p = counts / counts.sum()
+    
+    return calculate_entropy_unigram(p)
+
+
+
+def bigram_sample_entropy_and_var(
+    seqs: list[torch.Tensor],
+    hparams: dict
+) -> Tuple[float, float]:
+    
+    counts = torch.zeros(
+        (hparams['vocab_size'], hparams['vocab_size']),
+        device=device,
+        dtype=torch.float32
+    )
+    
+    for seq in seqs:
+        
+        for i in range(len(seq) - 1):
+            if hparams['use_control_symbols']:
+                if seq[i] == hparams['bos_token_id']:
+                    continue
+                if seq[i+1] == hparams['eos_token_id']:
+                    break
+            counts[seq[i], seq[i + 1]] += 1
+    
+    p = counts / counts.sum(1, keepdim=True)
+    
+    return calculate_entropy_bigram(p)
+
+
 
 def calculate_entropy_unigram(unigram_table: torch.Tensor) -> Tuple[float, float]:
     """
@@ -115,7 +179,8 @@ def calculate_transient_entropy_unigram(
     batch_size: int,
     bos_token_id: int,
     eos_token_id: int,
-    pad_token_id: int
+    pad_token_id: int,
+    use_control_symbols: bool
 ) -> float:
     """
     Calculate entropy of a unigram table.
@@ -137,7 +202,8 @@ def calculate_transient_entropy_unigram(
         batch_size,
         bos_token_id,
         eos_token_id,
-        pad_token_id
+        pad_token_id,
+        use_control_symbols
     )
     
     t = -1 * (p * p.log()).sum()
@@ -152,7 +218,8 @@ def calculate_transient_entropy_bigram(
     batch_size: int,
     bos_token_id: int,
     eos_token_id: int,
-    pad_token_id: int
+    pad_token_id: int,
+    use_control_symbols: bool
 ) -> float:
     """
     Calculate entropy of a bigram table weighted by transient state probabilities
@@ -179,7 +246,8 @@ def calculate_transient_entropy_bigram(
         batch_size,
         bos_token_id,
         eos_token_id,
-        pad_token_id
+        pad_token_id,
+        use_control_symbols
     )
     
     # broadcast copies of p
@@ -202,7 +270,8 @@ def sample_unigram_seqs_to_convergence(
     batch_size: int,
     bos_token_id: int,
     eos_token_id: int,
-    pad_token_id: int
+    pad_token_id: int,
+    use_control_symbols: bool
 ) -> torch.Tensor:
     """
     Calculate the probability of all symbols in randomly sampled data to convergence.
@@ -235,20 +304,30 @@ def sample_unigram_seqs_to_convergence(
             # difference between current next estimate and current estimate
             norm = torch.norm(p_next - p)
             print(f"Iteration {i}, Norm: {norm.item():.6f}")
-            print(p)
+            #print(p)
             if norm < TOL: # TODO: set more reasonable threshold - maybe 2e-5
                 break
         p = p_next
 
         # Generate unigram sequences in larger batches to better utilize GPU
-        seqs = generate_unigram_sequences_using_table(
-            batch_size,
-            max_length,
-            unigram_table,
-            bos_token_id,
-            eos_token_id,
-            pad_token_id
-        )
+        if use_control_symbols:
+            seqs = generate_unigram_sequences_using_table(
+                batch_size,
+                max_length,
+                unigram_table,
+                bos_token_id,
+                eos_token_id,
+                pad_token_id
+            )
+        else:
+            seqs = generate_unigram_sequences_using_table_no_control_symbols(
+                batch_size,
+                max_length,
+                unigram_table,
+                bos_token_id,
+                eos_token_id,
+                pad_token_id
+            )
 
         # Ensure seqs is on the same device before calling `.unique`
         seqs = seqs.to(device)
@@ -257,16 +336,15 @@ def sample_unigram_seqs_to_convergence(
         uc, uc_counts = seqs.unique(return_counts=True)
         
         # ignore pad token
-        mask = (uc != pad_token_id)
-        mask &= (uc != eos_token_id)
-        mask &= (uc != bos_token_id)
-        uc = uc[mask]
-        uc_counts = uc_counts[mask]
-
-        # GPU-optimized scatter_add_
-        # add to running counts
-        # generated indices are in range(3, n + 3)
-        counts.scatter_add_(0, uc - 3, uc_counts.to(counts.dtype))
+        if use_control_symbols:
+            mask = (uc != pad_token_id)
+            mask &= (uc != eos_token_id)
+            mask &= (uc != bos_token_id)
+            uc = uc[mask]
+            uc_counts = uc_counts[mask]
+            counts.scatter_add_(0, uc - 3, uc_counts.to(counts.dtype))
+        else:
+            counts.scatter_add_(0, uc, uc_counts.to(counts.dtype))
 
     return p
 
@@ -278,7 +356,8 @@ def sample_bigram_seqs_to_convergence(
     batch_size: int,
     bos_token_id: int,
     eos_token_id: int,
-    pad_token_id: int
+    pad_token_id: int,
+    use_control_symbols: bool
 ) -> torch.Tensor:
     
     """
@@ -317,14 +396,24 @@ def sample_bigram_seqs_to_convergence(
         p = p_next
 
         # Generate bigram sequences in larger batches to better utilize GPU
-        seqs = generate_bigram_sequences_using_table(
-            batch_size,
-            max_length,
-            bigram_table,
-            bos_token_id,
-            eos_token_id,
-            pad_token_id
-        )
+        if use_control_symbols:
+            seqs = generate_bigram_sequences_using_table(
+                batch_size,
+                max_length,
+                bigram_table,
+                bos_token_id,
+                eos_token_id,
+                pad_token_id
+            )
+        else:
+            seqs = generate_bigram_sequences_using_table_no_control_symbols(
+                batch_size,
+                max_length,
+                bigram_table,
+                bos_token_id,
+                eos_token_id,
+                pad_token_id
+            )
 
         # Ensure seqs is on the same device before calling `.unique`
         seqs = seqs.to(device)
@@ -333,16 +422,15 @@ def sample_bigram_seqs_to_convergence(
         uc, uc_counts = seqs.unique(return_counts=True)
         
         # ignore control symbols
-        mask = (uc != pad_token_id)
-        mask &= (uc != bos_token_id)
-        mask &= (uc != eos_token_id)
-        uc = uc[mask]
-        uc_counts = uc_counts[mask]
-
-        # GPU-optimized scatter_add_
-        # add to running counts
-        # generated indices are in range(3, n + 3)
-        counts.scatter_add_(0, uc - 3, uc_counts.to(counts.dtype))
+        if use_control_symbols:
+            mask = (uc != pad_token_id)
+            mask &= (uc != bos_token_id)
+            mask &= (uc != eos_token_id)
+            uc = uc[mask]
+            uc_counts = uc_counts[mask]
+            counts.scatter_add_(0, uc - 3, uc_counts.to(counts.dtype))
+        else:
+            counts.scatter_add_(0, uc, uc_counts.to(counts.dtype))
 
     return p
         

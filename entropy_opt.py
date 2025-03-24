@@ -62,10 +62,11 @@ def get_dist(
         DV = torch.tensor(desired_varent, dtype=torch.float64)
         DV.requires_grad = False
     
-    optimizer = torch.optim.AdamW([dist], lr=0.01)
+    optimizer = torch.optim.AdamW([dist], lr=0.001)
     
     i = 0
-    print('-----------------------------------------------------')
+    if do_logging:
+        print('-----------------------------------------------------')
     while True:
         
         optimizer.zero_grad()
@@ -77,31 +78,38 @@ def get_dist(
         loss.backward()
         optimizer.step()
         
-        if do_logging and (i % 200 == 0):
+        if (i % 200 == 0):
             with torch.no_grad():
                 loss_val = loss.item()
-                print(f'loss: {loss_val:.4}')
-                if loss_val < 1e-6:
+                if do_logging:
+                    print(f'loss: {loss_val:.4}')
+                if loss_val < tol:
                     break
 
         i += 1
+        
+        if i > 100_000:
+            msg = 'Optimization did not converge!'
+            Warning(msg)
+            break
     
     final_dist = torch.softmax(dist, dim=0)
     
-    print('-----------------------------------------------------')
-    print(f'sum of probabilities (should be 1): {final_dist.sum()}')
-    X = -final_dist.log()
-    E_X = (final_dist * X).sum()
-    E_X_sq = (final_dist * X * X).sum()
-    mean = E_X.item()
-    var = E_X_sq.item() - (mean ** 2)
-    print('-----------------------------------------------------')
-    print(f'desired entropy:    {desired_entropy}')
-    print(f'true entropy:       {mean}')
-    print('-----------------------------------------------------')
-    print(f'desired varentropy: {desired_varent}')
-    print(f'true varentropy:    {var}')
-    print('-----------------------------------------------------')
+    if do_logging:
+        print('-----------------------------------------------------')
+        print(f'sum of probabilities (should be 1): {final_dist.sum()}')
+        X = -final_dist.log()
+        E_X = (final_dist * X).sum()
+        E_X_sq = (final_dist * X * X).sum()
+        mean = E_X.item()
+        var = E_X_sq.item() - (mean ** 2)
+        print('-----------------------------------------------------')
+        print(f'desired entropy:    {desired_entropy}')
+        print(f'true entropy:       {mean}')
+        print('-----------------------------------------------------')
+        print(f'desired varentropy: {desired_varent}')
+        print(f'true varentropy:    {var}')
+        print('-----------------------------------------------------')
     return final_dist
 
 """
