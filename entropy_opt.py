@@ -17,7 +17,7 @@ class MSEAgainstEntropyLoss(nn.Module):
         
         return mse
     
-class MSEAgainstEntropyAndVarEntropy(nn.Module):
+class MSEAgainstEntropyAndVarEntropyLoss(nn.Module):
     
     def __init__(self):
         super().__init__()
@@ -42,15 +42,17 @@ def get_dist(
     desired_varent: float = None,
     do_logging: bool = True,
     tol: float = 1e-6
-):
+) -> tuple[Tensor, float, float]:
+    
+    losses = []
     
     if desired_varent is not None:
         msg = 'Cannot specify a varentropy and use a criterion that ignores it!'
-        assert isinstance(criterion, MSEAgainstEntropyAndVarEntropy), msg
+        assert isinstance(criterion, MSEAgainstEntropyAndVarEntropyLoss), msg
     if isinstance(criterion, MSEAgainstEntropyLoss):
         msg = 'Cannot specify a varentropy and use a criterion that ignores it!'
         assert desired_varent is None
-    if isinstance(criterion, MSEAgainstEntropyAndVarEntropy):
+    if isinstance(criterion, MSEAgainstEntropyAndVarEntropyLoss):
         msg = 'Must specify a varentropy and use a criterion that includes it!'
         assert desired_varent is not None, msg
     
@@ -78,13 +80,20 @@ def get_dist(
         loss.backward()
         optimizer.step()
         
-        if (i % 200 == 0):
+        if (i % 1000 == 0):
             with torch.no_grad():
                 loss_val = loss.item()
                 if do_logging:
                     print(f'loss: {loss_val:.4}')
                 if loss_val < tol:
                     break
+                losses.append(loss_val)
+                if len(losses) > 1:
+                    if abs(losses[-1] - losses[-2]) < tol:
+                        if losses[-1] >= tol:
+                            msg = 'Optimization did not converge!'
+                            Warning(msg)
+                        break
 
         i += 1
         
@@ -92,25 +101,28 @@ def get_dist(
             msg = 'Optimization did not converge!'
             Warning(msg)
             break
+        
+        
     
     final_dist = torch.softmax(dist, dim=0)
+    
+    X = -final_dist.log()
+    E_X = (final_dist * X).sum()
+    E_X_sq = (final_dist * X * X).sum()
+    mean = E_X.item()
+    var = E_X_sq.item() - (mean ** 2)
     
     if do_logging:
         print('-----------------------------------------------------')
         print(f'sum of probabilities (should be 1): {final_dist.sum()}')
-        X = -final_dist.log()
-        E_X = (final_dist * X).sum()
-        E_X_sq = (final_dist * X * X).sum()
-        mean = E_X.item()
-        var = E_X_sq.item() - (mean ** 2)
         print('-----------------------------------------------------')
         print(f'desired entropy:    {desired_entropy}')
-        print(f'true entropy:       {mean}')
+        print(f' actual entropy:    {mean}')
         print('-----------------------------------------------------')
         print(f'desired varentropy: {desired_varent}')
-        print(f'true varentropy:    {var}')
+        print(f' actual varentropy: {var}')
         print('-----------------------------------------------------')
-    return final_dist
+    return final_dist, mean, var
 
 """
     Example calls:
